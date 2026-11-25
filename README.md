@@ -12,10 +12,11 @@ Plataforma ERP multitenant organizada por **giro comercial**, **aislamiento de d
 ## Principios y reglas de trabajo
 1. **Separación estricta por giro:** tablas, rutas, vistas y lógica separadas por giro para evitar cruces al modificar código.
 2. **Arranque limpio sin datos de prueba:** las migraciones dejan las tablas listas sin empresas ni registros semilla; las empresas de prueba se crean bajo demanda.
-3. **Consola del proveedor de la plataforma (tú):**
-   - Alta de empresas con \giro_comercial\ fijo y selección de páginas habilitadas para el cliente en renta.
-   - Compra de timbres al por mayor (\olsa_timbres_lotes\) y asignación de timbres a empresas (\signaciones_timbres\ + \empresas.saldo_timbres\).
-   - Página de monitoreo (\monitoreo_servicios_empresa\) enfocada en disponibilidad de páginas, estado/saldo de timbres y señales del servicio **sin acceder a los datos operativos privados del cliente**.
+3. **Consola del proveedor de la plataforma (\/plataforma\):**
+   - **Template propio administrable:** personalización en vivo desde BD de colores, tipografías, tamaños, bordes, fondos y presets visuales para las páginas del operador de plataforma.
+   - **Alta de empresas en renta:** asignación de \giro_comercial\ fijo/bloqueado, sucursal matriz y páginas habilitadas por cliente.
+   - **Bolsa mayorista y asignación de timbres:** registro de lotes comprados al por mayor (\olsa_timbres_lotes\) y asignación con descuento automático hacia cada empresa (\signaciones_timbres\ + \empresas.saldo_timbres\).
+   - **Monitoreo de servicios (\monitoreo_servicios_empresa\):** supervisión de disponibilidad de páginas, latencia y saldo/estado de timbres **sin acceso a los datos operativos privados del cliente**.
 4. **Documentación continua:** todo cambio relevante queda asentado en \README.md\.
 
 ## Flujo de ramas Git
@@ -27,4 +28,5 @@ Plataforma ERP multitenant organizada por **giro comercial**, **aislamiento de d
 - **Etapa 1:** repositorio limpio en \Carlos89Novela/ERP-Multitenant\ con ramas \main\, \develop\ y \	est\, \.gitignore\ seguro y estructura de 5 giros.
 - **Etapa 2:** base Laravel limpia y \README.md\ inicial en \develop\.
 - **Etapa 3:** migraciones base en blanco para multitenant, autogestión de páginas/templates, compra/asignación mayorista de timbres, monitoreo de servicios (sin acceso a datos de negocio del cliente) y tablas base para los 5 giros.
-- **Siguiente etapa:** modelos Eloquent, consola de alta de empresas + timbres + monitoreo de servicios, y generador limpio de empresa de prueba por giro.
+- **Etapa 4:** modelos Eloquent base y Consola de Plataforma (\/plataforma\) con selector/editor de template propio en BD, alta de empresas en renta, compra mayorista/asignación de timbres y monitor técnico de servicio.
+- **Siguiente etapa:** configurar base de datos en \.env\, ejecutar \php artisan migrate\, proteger \/plataforma\ con middleware de operador de plataforma y construir los módulos separados por giro.
