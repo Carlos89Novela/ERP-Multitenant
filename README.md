@@ -1,25 +1,14 @@
 ﻿# ERP-Multitenant
 
-Plataforma ERP multitenant exclusiva de **CanoDevOps**, organizada por **giro comercial**, **aislamiento de datos sin datos de prueba iniciales**, **gestión dinámica de páginas según giro comercial**, **contabilidad de timbres con comprobantes PDF/XML**, **planes de renta (1, 3, 6, 9 y 12 meses) con facturación a clientes**, **licenciamiento con tolerancia de mes completo** y **monitoreo técnico de servicios**.
+Plataforma ERP multitenant exclusiva de **CanoDevOps**, respaldada por **MariaDB / MySQL** con **bases de datos independientes** para la plataforma y cada uno de los **5 giros comerciales**, arrancando limpias sin datos de prueba iniciales.
 
-## Giros comerciales soportados y páginas específicas por giro
-- \eparacion_computadoras\ (\giros/reparacion_computadoras\): **Órdenes de Reparación** + **Promociones y Combos (Reparaciones)**.
-- \eparacion_celulares\ (\giros/reparacion_celulares\): **Órdenes de Reparación** + **Promociones y Combos (Reparaciones)**.
-- \estaurante_cafeteria\ (\giros/restaurante_cafeteria\): **Comandero, Mesas y KDS** + **Recetas y Platillos (Alta / Activar-Desactivar)** + **Promociones y Combos (Restaurante)**.
-- \barrotes\ (\giros/abarrotes\): módulos comerciales base + **Promociones y Descuentos (Abarrotes)**.
-- \erreteria\ (\giros/ferreteria\): módulos comerciales base + **Promociones y Descuentos (Ferretería)**.
-
-## Principios y reglas de trabajo
-1. **Separación estricta por giro y catálogo dinámico de páginas:** al dar de alta una empresa en \/plataforma/empresas\, tanto el formulario como el servidor filtran automáticamente las páginas disponibles según el \giro_comercial\ elegido.
-2. **Arranque limpio sin datos de prueba:** las migraciones dejan las tablas listas sin empresas ni registros semilla; las empresas de prueba se crean bajo demanda.
-3. **Consola exclusiva de CanoDevOps (páginas separadas):**
-   - \/plataforma/monitoreo\: supervisión de disponibilidad de páginas, latencia, estado de licencia y saldo/estado de timbres **sin acceso a los datos operativos privados del cliente**.
-   - \/plataforma/empresas\: alta de empresas en renta con \giro_comercial\ fijo/bloqueado, plazo de renta (\1, 3, 6, 9, 12\ meses), vigencia/tolerancia de licencia, páginas dinámicas según giro y cuenta inicial de **Propietario**.
-   - \/plataforma/facturacion\: emisión/registro de facturas a clientes por renta o paquetes de timbres, marcación de pagos y extensión automática de vigencia/timbres.
-   - \/plataforma/timbres\: registro de compras mayoristas con carga y descarga segura de **PDF y XML** del proveedor, contabilización automática en bolsa y asignación a empresas.
-   - \/plataforma/apariencia\: personalización en vivo desde BD del template de la consola de CanoDevOps + gestión de operador principal inmutable y usuarios de plataforma.
-4. **Política de licenciamiento y tolerancia:** al vencer un periodo de renta se contempla un margen de tolerancia (por defecto 30 días / mes completo) en estado de gracia antes de suspender por morosidad.
-5. **Documentación continua:** todo cambio relevante queda asentado en \README.md\.
+## Arquitectura de Bases de Datos (MariaDB)
+1. \erp_plataforma\ (conexión \mysql\): gestión exclusiva de CanoDevOps (\empresas\, \sucursales\, \users\ con \es_operador_principal\, \	emplate_configuraciones\, \olsa_timbres_lotes\ con XML/PDF, \signaciones_timbres\, \acturas_clientes\ con plazos 1/3/6/9/12 meses y \monitoreo_servicios_empresa\).
+2. \erp_reparacion_computadoras\ (conexión \giro_reparacion_computadoras\): \equipos_taller\, \ordenes_reparacion\, \promociones_combos_taller\.
+3. \erp_restaurante_cafeteria\ (conexión \giro_restaurante_cafeteria\): \mesas_restaurante\, \ecetas_platillos\, \comandas_restaurante\, \promociones_combos_restaurante\.
+4. \erp_abarrotes\ (conexión \giro_abarrotes\): \productos_abarrotes\, \promociones_descuentos_abarrotes\.
+5. \erp_ferreteria\ (conexión \giro_ferreteria\): \productos_ferreteria\, \promociones_descuentos_ferreteria\.
+6. \erp_reparacion_celulares\ (conexión \giro_reparacion_celulares\): \equipos_celulares\, \ordenes_reparacion_celulares\, \promociones_combos_celulares\.
 
 ## Flujo de ramas Git
 - \main\: versión estable y aprobada tras pruebas.
@@ -27,5 +16,5 @@ Plataforma ERP multitenant exclusiva de **CanoDevOps**, organizada por **giro co
 - \	est\: rama de pruebas; recibe de \develop\, se prueban cambios y se regresan ajustes a \develop\ antes de unir a \main\.
 
 ## Bitácora de avances
-- **Etapa 1–15:** repositorio limpio, migraciones base sin datos de prueba, consola separada en páginas independientes, login/logout por perfil, operador principal inmutable, lotes de timbres con XML/PDF, facturación por plazos (1, 3, 6, 9 y 12 meses), tolerancia de licencia, módulo inicial de \eparacion_computadoras\ y catálogo dinámico por giro con recetas y promociones en talleres y restaurantes.
-- **Etapa 16:** incorporación de **Promociones y Descuentos (Abarrotes)** y **Promociones y Descuentos (Ferretería)** al catálogo dinámico por giro.
+- **Etapa 1–16:** repositorio limpio, consola separada en páginas independientes (\monitoreo\, \empresas\, \acturacion\, \	imbres\, \pariencia\), login/logout por perfil, operador principal inmutable, lotes de timbres con XML/PDF, facturación por plazos (1, 3, 6, 9 y 12 meses), tolerancia de licencia y catálogo dinámico de páginas por giro.
+- **Etapa 17:** migración completa a **MariaDB** con 6 bases de datos independientes (\erp_plataforma\ + una BD dedicada por cada uno de los 5 giros) y ejecución limpia de todas sus tablas sin datos quemados.

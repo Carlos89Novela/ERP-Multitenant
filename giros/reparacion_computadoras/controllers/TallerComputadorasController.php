@@ -52,13 +52,13 @@ class TallerComputadorasController extends Controller
         $empresa = $this->resolverEmpresaActiva($request);
         $template = $this->resolverTemplate($empresa);
 
-        $equipos = DB::table('equipos_taller')
+        $equipos = DB::connection('giro_reparacion_computadoras')->table('equipos_taller')
             ->where('empresa_id', $empresa->id)
             ->orderByDesc('id')
             ->limit(50)
             ->get();
 
-        $ordenes = DB::table('ordenes_reparacion')
+        $ordenes = DB::connection('giro_reparacion_computadoras')->table('ordenes_reparacion')
             ->leftJoin('equipos_taller', 'equipos_taller.id', '=', 'ordenes_reparacion.equipo_id')
             ->where('ordenes_reparacion.empresa_id', $empresa->id)
             ->select([
@@ -92,7 +92,7 @@ class TallerComputadorasController extends Controller
             'falla_reportada' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $folioExiste = DB::table('ordenes_reparacion')
+        $folioExiste = DB::connection('giro_reparacion_computadoras')->table('ordenes_reparacion')
             ->where('empresa_id', $empresa->id)
             ->where('folio', trim($data['folio']))
             ->exists();
@@ -101,8 +101,8 @@ class TallerComputadorasController extends Controller
             return back()->withInput()->withErrors(['folio' => 'Ya existe una orden con ese folio en esta empresa.']);
         }
 
-        DB::transaction(function () use ($empresa, $data): void {
-            $equipoId = DB::table('equipos_taller')->insertGetId([
+        DB::connection('giro_reparacion_computadoras')->transaction(function () use ($empresa, $data): void {
+            $equipoId = DB::connection('giro_reparacion_computadoras')->table('equipos_taller')->insertGetId([
                 'empresa_id' => $empresa->id,
                 'tipo_equipo' => trim($data['tipo_equipo']),
                 'marca' => $data['marca'] ? trim($data['marca']) : null,
@@ -112,7 +112,7 @@ class TallerComputadorasController extends Controller
                 'updated_at' => now(),
             ]);
 
-            DB::table('ordenes_reparacion')->insert([
+            DB::connection('giro_reparacion_computadoras')->table('ordenes_reparacion')->insert([
                 'empresa_id' => $empresa->id,
                 'equipo_id' => $equipoId,
                 'folio' => trim($data['folio']),
@@ -136,7 +136,7 @@ class TallerComputadorasController extends Controller
             'estado' => ['required', 'in:recibido,diagnostico,reparacion,listo,entregado,cancelado'],
         ]);
 
-        $actualizadas = DB::table('ordenes_reparacion')
+        $actualizadas = DB::connection('giro_reparacion_computadoras')->table('ordenes_reparacion')
             ->where('id', $ordenId)
             ->where('empresa_id', $empresa->id)
             ->update([
