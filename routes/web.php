@@ -32,7 +32,6 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Empresa\EmpresaPortalController;
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-Route::post('/login', [AuthController::class, 'login'])->name('login.submit');
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
 Route::middleware('auth')->prefix('empresa')->name('empresa.')->group(function () {
@@ -88,3 +87,5 @@ Route::middleware('auth:web')->post('/plataforma/empresas/{empresaId}/reset-pass
 
     return back()->with('status', "Contraseña temporal generada para {$propietario->email}: {$temporal} (se exigirá cambio al ingresar).");
 })->name('plataforma.empresas.reset_password_propietario');
+
+Route::post('/login', [\App\Http\Controllers\Auth\AuthController::class, 'login'])->name('login.submit');
