@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
 class AuthController extends Controller
@@ -28,8 +29,7 @@ class AuthController extends Controller
 
         $host = preg_replace('/:\d+$/', '', mb_strtolower((string) $request->getHost()));
         if ($host !== '' && ! in_array($host, ['127.0.0.1', 'localhost', '::1'], true)) {
-            $schema = \Illuminate\Support\Facades\Schema::getConnection();
-            if (\Illuminate\Support\Facades\Schema::hasColumn('empresas', 'dominio')) {
+            if (Schema::hasColumn('empresas', 'dominio')) {
                 $porDominio = Empresa::query()
                     ->where('activa', true)
                     ->whereRaw('LOWER(dominio) = ?', [$host])
@@ -42,6 +42,24 @@ class AuthController extends Controller
 
         return null;
     }
+
+    private function redirigirPostLoginEmpresa(Empresa $empresa, UsuarioGiro $usuarioGiro): RedirectResponse
+    {
+        if ((bool) ($usuarioGiro->debe_cambiar_password ?? false)) {
+            return redirect()->route('empresa.password.forzoso');
+        }
+
+        if ($empresa->giro_comercial === 'reparacion_computadoras') {
+            if (($usuarioGiro->rol_empresa ?? '') === 'mostrador') {
+                return redirect()->route('giro.computadoras.ordenes');
+            }
+
+            return redirect()->route('giro.computadoras.index');
+        }
+
+        return redirect()->route('empresa.portal');
+    }
+
     public function showLogin(Request $request, ?string $slug = null): View
     {
         $empresa = $this->resolverEmpresaPorContexto($request, $slug);
@@ -67,15 +85,9 @@ class AuthController extends Controller
                 ?? new TemplateConfiguracion(TemplateConfiguracion::defaultsPlataforma());
         }
 
-        $empresasActivas = Empresa::query()
-            ->where('activa', true)
-            ->orderBy('nombre')
-            ->get(['id', 'nombre', 'slug', 'giro_comercial']);
-
         return view('auth.login', [
             'template' => $template,
             'empresa' => $empresa,
-            'empresasActivas' => $empresasActivas,
         ]);
     }
 
@@ -90,7 +102,14 @@ class AuthController extends Controller
         $emailNormalizado = trim(mb_strtolower($credentials['email']));
         $slugObjetivo = trim((string) ($slug ?: ($credentials['empresa_slug'] ?? '')));
 
-        // A) Login ambientado de empresa -> busca en usuarios_empresa dentro de la BD del giro
+        if ($slugObjetivo === '') {
+            $empresaContexto = $this->resolverEmpresaPorContexto($request, null);
+            if ($empresaContexto) {
+                $slugObjetivo = $empresaContexto->slug;
+            }
+        }
+
+        // A) Login en contexto de empresa (dominio propio, /tienda/{slug}/login o empresa_slug)
         if ($slugObjetivo !== '') {
             $empresa = Empresa::query()
                 ->where('slug', $slugObjetivo)
@@ -125,43 +144,53 @@ class AuthController extends Controller
             $request->session()->regenerate();
             $request->session()->put('giro_conexion_activa', $connGiro);
 
-            if ((bool) ($usuarioGiro->debe_cambiar_password ?? false)) {
-                return redirect()->route('empresa.password.forzoso');
-            }
-
-            if ($empresa->giro_comercial === 'reparacion_computadoras') {
-                if ($usuarioGiro->rol_empresa === 'mostrador') {
-                    return redirect()->route('giro.computadoras.ordenes');
-                }
-
-                return redirect()->route('giro.computadoras.index');
-            }
-
-            return redirect()->route('empresa.portal');
+            return $this->redirigirPostLoginEmpresa($empresa, $usuarioGiro);
         }
 
-        // B) Login general de Plataforma CanoDevOps -> erp_plataforma.users
-        if (! Auth::guard('web')->attempt([
+        // B) Login desde /login sin slug: primero probar operador de plataforma (erp_plataforma.users)
+        if (Auth::guard('web')->attempt([
             'email' => $emailNormalizado,
             'password' => $credentials['password'],
         ], $request->boolean('remember'))) {
-            return back()
-                ->withInput($request->only('email'))
-                ->withErrors(['email' => 'Credenciales inválidas. Si eres usuario de una empresa, entra desde su portal.']);
-        }
+            $request->session()->regenerate();
+            $user = $request->user('web');
 
-        $request->session()->regenerate();
-        $user = $request->user('web');
+            if (($user->activo ?? true) && is_null($user->empresa_id)) {
+                return redirect()->intended(route('plataforma.monitoreo'));
+            }
 
-        if (! ($user->activo ?? true) || ! is_null($user->empresa_id)) {
             Auth::guard('web')->logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-
-            return back()->withErrors(['email' => 'Cuenta no autorizada en consola de plataforma.']);
         }
 
-        return redirect()->intended(route('plataforma.monitoreo'));
+        // C) Si no es operador de plataforma, buscar el correo en las BDs de giros de empresas activas
+        $empresasActivas = Empresa::query()->where('activa', true)->get();
+        foreach ($empresasActivas as $emp) {
+            $connGiro = UsuarioGiro::conexionPorGiro($emp->giro_comercial);
+            Config::set('database.connections.usuario_giro_runtime', config("database.connections.{$connGiro}"));
+            DB::purge('usuario_giro_runtime');
+
+            $ug = UsuarioGiro::on('usuario_giro_runtime')
+                ->where('empresa_id', $emp->id)
+                ->where('email', $emailNormalizado)
+                ->first();
+
+            if ($ug && is_string($ug->password) && Hash::check($credentials['password'], $ug->password)) {
+                if (! $ug->activo) {
+                    return back()->withInput($request->only('email'))
+                        ->withErrors(['email' => 'Tu cuenta en esta empresa se encuentra desactivada.']);
+                }
+
+                Auth::guard('empresa')->login($ug, $request->boolean('remember'));
+                $request->session()->regenerate();
+                $request->session()->put('giro_conexion_activa', $connGiro);
+
+                return $this->redirigirPostLoginEmpresa($emp, $ug);
+            }
+        }
+
+        return back()
+            ->withInput($request->only('email'))
+            ->withErrors(['email' => 'Credenciales inválidas.']);
     }
 
     public function logout(Request $request): RedirectResponse
