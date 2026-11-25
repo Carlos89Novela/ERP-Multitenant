@@ -119,6 +119,7 @@ class RestauranteCafeteriaController extends Controller
             'ingredientes_instrucciones' => ['nullable', 'string', 'max:3000'],
             'costo_insumos' => ['nullable', 'numeric', 'min:0'],
             'precio_venta' => ['required', 'numeric', 'min:0'],
+            'imagen_receta' => ['nullable', 'image', 'max:4096'],
         ]);
 
         DB::connection('giro_restaurante_cafeteria')->table('recetas_platillos')->insert([
@@ -128,6 +129,7 @@ class RestauranteCafeteriaController extends Controller
             'ingredientes_instrucciones' => $data['ingredientes_instrucciones'] ? trim($data['ingredientes_instrucciones']) : null,
             'costo_insumos' => (float) ($data['costo_insumos'] ?? 0),
             'precio_venta' => (float) $data['precio_venta'],
+            'imagen_path' => $request->hasFile('imagen_receta') ? $request->file('imagen_receta')->store("empresas/{$empresa->id}/recetas", 'public') : null,
             'activa' => true,
             'created_at' => now(),
             'updated_at' => now(),
