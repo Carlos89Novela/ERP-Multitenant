@@ -9,6 +9,8 @@ use App\Models\Empresa;
 use App\Models\MonitoreoServicioEmpresa;
 use App\Models\Sucursal;
 use App\Models\TemplateConfiguracion;
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -123,6 +125,10 @@ class PlataformaController extends Controller
             'giro_comercial' => ['required', "in:{$girosKeys}"],
             'sucursal_nombre' => ['required', 'string', 'max:150'],
             'umbral_alerta_timbres' => ['required', 'integer', 'min:1', 'max:100000'],
+            'propietario_nombre' => ['nullable', 'string', 'max:120'],
+            'propietario_email' => ['nullable', 'email', 'max:160', 'unique:users,email'],
+            'propietario_password' => ['nullable', 'string', 'min:8', 'max:120'],
+            'puede_autogestionar_template' => ['nullable', 'boolean'],
             'paginas_habilitadas' => ['nullable', 'array'],
             'paginas_habilitadas.*' => ['string', 'max:60'],
         ]);
@@ -170,6 +176,18 @@ class PlataformaController extends Controller
                 'ultimo_latido_at' => now(),
                 'ultimo_evento_servicio' => 'Alta de instancia en plataforma (sin timbres asignados)',
             ]);
+            if (! empty($data['propietario_nombre']) && ! empty($data['propietario_email']) && ! empty($data['propietario_password'])) {
+                User::query()->create([
+                    'name' => trim($data['propietario_nombre']),
+                    'email' => strtolower(trim($data['propietario_email'])),
+                    'password' => Hash::make($data['propietario_password']),
+                    'empresa_id' => $empresa->id,
+                    'role' => 'propietario',
+                    'es_propietario' => true,
+                    'puede_autogestionar_template' => (bool) ($data['puede_autogestionar_template'] ?? true),
+                    'es_operador_plataforma' => false,
+                ]);
+            }
         });
 
         return redirect()
@@ -323,5 +341,29 @@ class PlataformaController extends Controller
         return redirect()
             ->route('plataforma.consola')
             ->with('status', "Ping de servicio registrado para {$empresa->nombre}.");
+    }
+
+    public function registrarOperador(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:120'],
+            'email' => ['required', 'email', 'max:160', 'unique:users,email'],
+            'password' => ['required', 'string', 'min:8', 'max:120'],
+        ]);
+
+        User::query()->create([
+            'name' => trim($data['name']),
+            'email' => strtolower(trim($data['email'])),
+            'password' => Hash::make($data['password']),
+            'empresa_id' => null,
+            'role' => 'operador_plataforma',
+            'es_propietario' => false,
+            'puede_autogestionar_template' => false,
+            'es_operador_plataforma' => true,
+        ]);
+
+        return redirect()
+            ->route('plataforma.consola')
+            ->with('status', 'Cuenta de Operador de Plataforma creada correctamente.');
     }
 }

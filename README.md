@@ -14,7 +14,7 @@ Plataforma ERP multitenant organizada por **giro comercial**, **aislamiento de d
 2. **Arranque limpio sin datos de prueba:** las migraciones dejan las tablas listas sin empresas ni registros semilla; las empresas de prueba se crean bajo demanda.
 3. **Consola del proveedor de la plataforma (\/plataforma\):**
    - **Template propio administrable:** personalización en vivo desde BD de colores, tipografías, tamaños, bordes, fondos y presets visuales para las páginas del operador de plataforma.
-   - **Alta de empresas en renta:** asignación de \giro_comercial\ fijo/bloqueado, sucursal matriz y páginas habilitadas por cliente.
+   - **Alta de empresas en renta:** asignación de \giro_comercial\ fijo/bloqueado, sucursal matriz, páginas habilitadas y cuenta inicial de **Propietario**.
    - **Bolsa mayorista y asignación de timbres:** registro de lotes comprados al por mayor (\olsa_timbres_lotes\) y asignación con descuento automático hacia cada empresa (\signaciones_timbres\ + \empresas.saldo_timbres\).
    - **Monitoreo de servicios (\monitoreo_servicios_empresa\):** supervisión de disponibilidad de páginas, latencia y saldo/estado de timbres **sin acceso a los datos operativos privados del cliente**.
 4. **Documentación continua:** todo cambio relevante queda asentado en \README.md\.
@@ -29,5 +29,6 @@ Plataforma ERP multitenant organizada por **giro comercial**, **aislamiento de d
 - **Etapa 2:** base Laravel limpia y \README.md\ inicial en \develop\.
 - **Etapa 3:** migraciones base en blanco para multitenant, autogestión de páginas/templates, compra/asignación mayorista de timbres, monitoreo de servicios (sin acceso a datos de negocio del cliente) y tablas base para los 5 giros.
 - **Etapa 4:** modelos Eloquent base y Consola de Plataforma (\/plataforma\) con selector/editor de template propio en BD, alta de empresas en renta, compra mayorista/asignación de timbres y monitor técnico de servicio.
-- **Etapa 5:** ejecución inicial de migraciones limpias en base de datos vacía y validación de \/plataforma\.
-- **Siguiente etapa:** guardia de acceso para operador de plataforma, alta de cuenta Propietario por empresa y módulos operativos por giro.
+- **Etapa 5:** ejecución inicial de migraciones limpias en base de datos vacía, generación de \APP_KEY\ y validación de \/plataforma\.
+- **Etapa 6:** guardia \operador.plataforma\, registro de cuenta de operador y creación de usuario Propietario al dar de alta una empresa.
+- **Siguiente etapa:** módulos y vistas iniciales por giro comercial (\eparacion_computadoras\, \estaurante_cafeteria\, \barrotes\, \erreteria\, \eparacion_celulares\) y paso a la rama \	est\ para pruebas.
