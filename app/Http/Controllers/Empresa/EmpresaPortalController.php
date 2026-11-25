@@ -21,6 +21,11 @@ class EmpresaPortalController extends Controller
             abort(403, 'Esta empresa se encuentra suspendida.');
         }
 
+        $estadoLicenciaEfectivo = $empresa->evaluarEstadoLicenciaEfectivo();
+        if ($estadoLicenciaEfectivo === 'suspendida_morosidad') {
+            abort(403, 'La licencia de la empresa superó el periodo de tolerancia tras el vencimiento. Contacta a CanoDevOps para renovar.');
+        }
+
         $template = TemplateConfiguracion::query()
             ->where('empresa_id', $empresa->id)
             ->where('activo', true)
@@ -36,6 +41,7 @@ class EmpresaPortalController extends Controller
         return view('empresa.portal', [
             'user' => $user,
             'empresa' => $empresa,
+            'estadoLicenciaEfectivo' => $estadoLicenciaEfectivo,
             'template' => $template,
             'girosDisponibles' => Empresa::GIROS_DISPONIBLES,
             'paginasCatalogo' => Empresa::PAGINAS_CATALOGO,

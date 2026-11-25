@@ -13,6 +13,7 @@ Route::prefix('plataforma')->name('plataforma.')->middleware('operador.plataform
     Route::get('/monitoreo', [PlataformaController::class, 'monitoreo'])->name('monitoreo');
     Route::get('/empresas', [PlataformaController::class, 'empresas'])->name('empresas');
     Route::get('/timbres', [PlataformaController::class, 'timbres'])->name('timbres');
+    Route::get('/facturacion', [PlataformaController::class, 'facturacion'])->name('facturacion');
     Route::get('/apariencia', [PlataformaController::class, 'apariencia'])->name('apariencia');
 
     Route::post('/template', [PlataformaController::class, 'guardarTemplatePlataforma'])->name('template.guardar');
@@ -22,6 +23,8 @@ Route::prefix('plataforma')->name('plataforma.')->middleware('operador.plataform
     Route::post('/timbres/lote', [PlataformaController::class, 'comprarLoteTimbres'])->name('timbres.lote');
     Route::get('/timbres/lote/{lote}/comprobante/{tipo}', [PlataformaController::class, 'descargarComprobanteLote'])->name('timbres.comprobante');
     Route::post('/timbres/asignar', [PlataformaController::class, 'asignarTimbresEmpresa'])->name('timbres.asignar');
+    Route::post('/facturacion', [PlataformaController::class, 'crearFacturaCliente'])->name('facturacion.store');
+    Route::post('/facturacion/{factura}/pagar', [PlataformaController::class, 'marcarFacturaPagada'])->name('facturacion.pagar');
     Route::post('/operador', [PlataformaController::class, 'registrarOperador'])->name('operador.store');
 });
 

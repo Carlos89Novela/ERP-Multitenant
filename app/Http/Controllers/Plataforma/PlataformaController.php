@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\AsignacionTimbres;
 use App\Models\BolsaTimbresLote;
 use App\Models\Empresa;
+use App\Models\FacturaCliente;
+use Carbon\Carbon;
 use App\Models\MonitoreoServicioEmpresa;
 use App\Models\Sucursal;
 use App\Models\TemplateConfiguracion;
@@ -47,6 +49,27 @@ class PlataformaController extends Controller
     public function index(): RedirectResponse
     {
         return redirect()->route('plataforma.monitoreo');
+    }
+
+    public function facturacion(): View
+    {
+        $empresas = Empresa::query()
+            ->orderBy('nombre')
+            ->get(['id', 'nombre', 'giro_comercial', 'plazo_meses', 'monto_renta', 'fecha_vencimiento_licencia', 'dias_gracia_licencia', 'estado_licencia', 'saldo_timbres', 'activa']);
+
+        $facturas = FacturaCliente::query()
+            ->with('empresa:id,nombre,giro_comercial')
+            ->orderByDesc('id')
+            ->limit(50)
+            ->get();
+
+        return view('plataforma.facturacion', [
+            'template' => $this->obtenerTemplatePlataforma(),
+            'resumen' => $this->resumenGlobal(),
+            'empresas' => $empresas,
+            'facturas' => $facturas,
+            'plazosRenta' => Empresa::PLAZOS_RENTA_MESES,
+        ]);
     }
 
     public function monitoreo(): View
@@ -172,6 +195,9 @@ class PlataformaController extends Controller
             'giro_comercial' => ['required', "in:{$girosKeys}"],
             'sucursal_nombre' => ['required', 'string', 'max:150'],
             'umbral_alerta_timbres' => ['required', 'integer', 'min:1', 'max:100000'],
+            'plazo_meses' => ['nullable', 'integer', 'in:1,3,6,9,12'],
+            'monto_renta' => ['nullable', 'numeric', 'min:0'],
+            'dias_gracia_licencia' => ['nullable', 'integer', 'min:1', 'max:120'],
             'paginas_habilitadas' => ['nullable', 'array'],
             'paginas_habilitadas.*' => ['string', 'max:60'],
             'propietario_nombre' => ['nullable', 'string', 'max:120'],
@@ -194,12 +220,21 @@ class PlataformaController extends Controller
                 array_keys(Empresa::PAGINAS_CATALOGO)
             ));
 
+            $plazoMeses = (int) ($data['plazo_meses'] ?? 1);
+            $diasGracia = (int) ($data['dias_gracia_licencia'] ?? 30);
+            $fechaVencimiento = Carbon::today()->addMonthsNoOverflow($plazoMeses)->toDateString();
+
             $empresa = Empresa::query()->create([
                 'nombre' => trim($data['nombre']),
                 'slug' => $slug,
                 'rfc' => ! empty($data['rfc']) ? strtoupper(trim($data['rfc'])) : null,
                 'giro_comercial' => $data['giro_comercial'],
                 'giro_bloqueado' => true,
+                'plazo_meses' => $plazoMeses,
+                'monto_renta' => (float) ($data['monto_renta'] ?? 0),
+                'fecha_vencimiento_licencia' => $fechaVencimiento,
+                'dias_gracia_licencia' => $diasGracia,
+                'estado_licencia' => 'activa',
                 'activa' => true,
                 'saldo_timbres' => 0,
                 'umbral_alerta_timbres' => (int) $data['umbral_alerta_timbres'],
@@ -462,5 +497,114 @@ class PlataformaController extends Controller
                     ? 'Cuenta PRINCIPAL e inmutable de Operador de Plataforma creada con acceso total.'
                     : 'Cuenta secundaria de Operador de Plataforma creada correctamente.'
             );
+    }
+
+    public function crearFacturaCliente(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'empresa_id' => ['required', 'integer', 'exists:empresas,id'],
+            'folio' => ['required', 'string', 'max:60', 'unique:facturas_clientes,folio'],
+            'concepto_tipo' => ['required', 'in:renta_plataforma,paquete_timbres,mixto'],
+            'plazo_meses' => ['nullable', 'integer', 'in:1,3,6,9,12'],
+            'timbres_incluidos' => ['nullable', 'integer', 'min:0', 'max:10000000'],
+            'subtotal' => ['required', 'numeric', 'min:0'],
+            'iva' => ['nullable', 'numeric', 'min:0'],
+            'estatus' => ['required', 'in:pendiente,pagada'],
+            'fecha_emision' => ['required', 'date'],
+            'fecha_vencimiento' => ['nullable', 'date'],
+            'notas' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        DB::transaction(function () use ($data): void {
+            $subtotal = round((float) $data['subtotal'], 2);
+            $iva = isset($data['iva']) ? round((float) $data['iva'], 2) : round($subtotal * 0.16, 2);
+            $total = round($subtotal + $iva, 2);
+            $plazo = (int) ($data['plazo_meses'] ?? 1);
+            $timbres = (int) ($data['timbres_incluidos'] ?? 0);
+            $esPagada = $data['estatus'] === 'pagada';
+
+            $factura = FacturaCliente::query()->create([
+                'empresa_id' => (int) $data['empresa_id'],
+                'folio' => trim($data['folio']),
+                'concepto_tipo' => $data['concepto_tipo'],
+                'plazo_meses' => $plazo,
+                'timbres_incluidos' => $timbres,
+                'subtotal' => $subtotal,
+                'iva' => $iva,
+                'total' => $total,
+                'estatus' => $data['estatus'],
+                'fecha_emision' => $data['fecha_emision'],
+                'fecha_vencimiento' => $data['fecha_vencimiento'] ?? Carbon::parse($data['fecha_emision'])->addDays(15)->toDateString(),
+                'pagada_at' => $esPagada ? now() : null,
+                'notas' => $data['notas'] ?? null,
+            ]);
+
+            if ($esPagada) {
+                $this->aplicarPagoFactura($factura);
+            }
+        });
+
+        return redirect()
+            ->route('plataforma.facturacion')
+            ->with('status', 'Factura registrada correctamente.');
+    }
+
+    public function marcarFacturaPagada(FacturaCliente $factura): RedirectResponse
+    {
+        if ($factura->estatus === 'pagada') {
+            return redirect()->route('plataforma.facturacion')->with('status', 'Esta factura ya estaba marcada como pagada.');
+        }
+
+        DB::transaction(function () use ($factura): void {
+            $factura->update([
+                'estatus' => 'pagada',
+                'pagada_at' => now(),
+            ]);
+
+            $this->aplicarPagoFactura($factura);
+        });
+
+        return redirect()
+            ->route('plataforma.facturacion')
+            ->with('status', "Factura {$factura->folio} marcada como pagada y vigencia/timbres actualizados.");
+    }
+
+    private function aplicarPagoFactura(FacturaCliente $factura): void
+    {
+        $empresa = Empresa::query()->lockForUpdate()->findOrFail($factura->empresa_id);
+        $updates = [
+            'estado_licencia' => 'activa',
+            'activa' => true,
+        ];
+
+        if ($factura->concepto_tipo !== 'paquete_timbres' && $factura->plazo_meses) {
+            $baseFecha = ($empresa->fecha_vencimiento_licencia && Carbon::parse($empresa->fecha_vencimiento_licencia)->isFuture())
+                ? Carbon::parse($empresa->fecha_vencimiento_licencia)
+                : Carbon::today();
+            $updates['plazo_meses'] = (int) $factura->plazo_meses;
+            $updates['fecha_vencimiento_licencia'] = $baseFecha->addMonthsNoOverflow((int) $factura->plazo_meses)->toDateString();
+        }
+
+        if ((int) $factura->timbres_incluidos > 0) {
+            $empresa->increment('saldo_timbres', (int) $factura->timbres_incluidos);
+        }
+
+        $empresa->update($updates);
+        $empresa->refresh();
+
+        $estadoTimbres = $empresa->saldo_timbres <= 0
+            ? 'agotado'
+            : ($empresa->saldo_timbres <= $empresa->umbral_alerta_timbres ? 'bajo' : 'ok');
+
+        MonitoreoServicioEmpresa::query()->updateOrCreate(
+            ['empresa_id' => $empresa->id],
+            [
+                'estado_pagina' => 'activo',
+                'estado_timbres' => $estadoTimbres,
+                'timbres_reportados' => $empresa->saldo_timbres,
+                'ultimo_latido_at' => now(),
+                'ultimo_evento_servicio' => "Pago aplicado ({$factura->folio}) — Licencia activa",
+            ]
+        );
     }
 }

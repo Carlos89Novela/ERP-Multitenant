@@ -89,6 +89,10 @@
                    class="px-3.5 py-2 text-xs font-medium {{ request()->routeIs('plataforma.empresas') ? 'tpl-btn-primary' : 'tpl-surface hover:opacity-90' }}">
                     Alta de Empresas
                 </a>
+                <a href="{{ route('plataforma.facturacion') }}"
+                   class="px-3.5 py-2 text-xs font-medium {{ request()->routeIs('plataforma.facturacion') ? 'tpl-btn-primary' : 'tpl-surface hover:opacity-90' }}">
+                    Facturación y Plazos
+                </a>
                 <a href="{{ route('plataforma.timbres') }}"
                    class="px-3.5 py-2 text-xs font-medium {{ request()->routeIs('plataforma.timbres') ? 'tpl-btn-primary' : 'tpl-surface hover:opacity-90' }}">
                     Gestión de Timbres
