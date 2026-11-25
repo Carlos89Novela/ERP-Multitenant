@@ -23,3 +23,14 @@ Route::prefix('plataforma')->name('plataforma.')->middleware('operador.plataform
     Route::post('/timbres/asignar', [PlataformaController::class, 'asignarTimbresEmpresa'])->name('timbres.asignar');
     Route::post('/operador', [PlataformaController::class, 'registrarOperador'])->name('operador.store');
 });
+
+use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Empresa\EmpresaPortalController;
+
+Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+Route::post('/login', [AuthController::class, 'login'])->name('login.post');
+Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
+
+Route::middleware('auth')->prefix('empresa')->name('empresa.')->group(function () {
+    Route::get('/portal', [EmpresaPortalController::class, 'portal'])->name('portal');
+});
