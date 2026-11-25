@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware('auth')
+Route::middleware('auth:empresa')
     ->prefix('giros/abarrotes')
     ->name('giro.abarrotes.')
     ->group(function () {

@@ -4,7 +4,7 @@ use App\Http\Controllers\Empresa\AutogestionTallerController;
 use Giros\ReparacionComputadoras\Controllers\TallerComputadorasController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware('auth')
+Route::middleware('auth:empresa')
     ->prefix('giros/reparacion-computadoras')
     ->name('giro.computadoras.')
     ->group(function () {

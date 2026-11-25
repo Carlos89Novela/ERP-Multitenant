@@ -2,41 +2,47 @@
 
 namespace App\Providers;
 
+use App\Models\UsuarioGiro;
+use Illuminate\Auth\Middleware\Authenticate;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
-        //
+        if (file_exists(app_path('Models/UsuarioGiro.php'))) {
+            require_once app_path('Models/UsuarioGiro.php');
+        }
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
+        foreach (glob(base_path('giros/*/controllers/*.php')) as $controllerFile) {
+            require_once $controllerFile;
+        }
+
         foreach (glob(base_path('giros/*/routes/web.php')) as $giroRouteFile) {
             require_once $giroRouteFile;
         }
 
         if (session()->has('giro_conexion_activa')) {
             $connActiva = (string) session('giro_conexion_activa');
-            \Illuminate\Support\Facades\Config::set('database.connections.usuario_giro_runtime', config("database.connections.{$connActiva}"));
-            \Illuminate\Support\Facades\DB::purge('usuario_giro_runtime');
+            if (config()->has("database.connections.{$connActiva}")) {
+                Config::set('database.connections.usuario_giro_runtime', config("database.connections.{$connActiva}"));
+                DB::purge('usuario_giro_runtime');
+            }
         }
 
-        if (file_exists(app_path('Models/UsuarioGiro.php'))) {
-            require_once app_path('Models/UsuarioGiro.php');
-        }
+        // Si un middleware 'auth' sin guard explicito es invocado dentro de /giros/ o /empresa/, usar guard 'empresa'
+        Authenticate::redirectUsing(function ($request) {
+            $slugSesion = (string) session('empresa_slug_activa', '');
+            if ($slugSesion !== '') {
+                return route('empresa.login', ['slug' => $slugSesion]);
+            }
 
-        foreach (glob(base_path('giros/*/controllers/*.php')) as $controllerFile) {
-            require_once $controllerFile;
-        }
-
-        //
+            return route('login');
+        });
     }
 }

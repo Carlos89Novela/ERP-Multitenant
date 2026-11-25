@@ -143,6 +143,7 @@ class AuthController extends Controller
             Auth::guard('empresa')->login($usuarioGiro, $request->boolean('remember'));
             $request->session()->regenerate();
             $request->session()->put('giro_conexion_activa', $connGiro);
+            $request->session()->put('empresa_slug_activa', $empresa->slug);
 
             return $this->redirigirPostLoginEmpresa($empresa, $usuarioGiro);
         }
@@ -183,6 +184,7 @@ class AuthController extends Controller
                 Auth::guard('empresa')->login($ug, $request->boolean('remember'));
                 $request->session()->regenerate();
                 $request->session()->put('giro_conexion_activa', $connGiro);
+            $request->session()->put('empresa_slug_activa', $empresa->slug);
 
                 return $this->redirigirPostLoginEmpresa($emp, $ug);
             }
@@ -206,7 +208,7 @@ class AuthController extends Controller
             Auth::guard('web')->logout();
         }
 
-        $request->session()->forget('giro_conexion_activa');
+        $request->session()->forget(['giro_conexion_activa', 'empresa_slug_activa']);
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
