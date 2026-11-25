@@ -60,9 +60,25 @@ class TallerComputadorasController extends Controller
         $template = $this->resolverTemplate($empresa);
         $conn = DB::connection('giro_reparacion_computadoras');
 
-        $ordenesCount = $conn->table('ordenes_reparacion')->where('empresa_id', $empresa->id)->count();
+        $ordenesQuery = $conn->table('ordenes_reparacion')->where('empresa_id', $empresa->id);
+        $ordenesTotal = (clone $ordenesQuery)->count();
+
+        $estadosConteo = [];
+        foreach (['recibido', 'diagnostico', 'reparacion', 'listo', 'entregado', 'cancelado'] as $estado) {
+            $estadosConteo[$estado] = (clone $ordenesQuery)->where('estado', $estado)->count();
+        }
+
+        $ordenesActivas = ($estadosConteo['recibido'] ?? 0)
+            + ($estadosConteo['diagnostico'] ?? 0)
+            + ($estadosConteo['reparacion'] ?? 0);
+
         $equiposCount = $conn->table('equipos_taller')->where('empresa_id', $empresa->id)->count();
-        $promosCount = $conn->table('promociones_combos_taller')->where('empresa_id', $empresa->id)->count();
+        $promosTotal = $conn->table('promociones_combos_taller')->where('empresa_id', $empresa->id)->count();
+        $promosActivas = $conn->table('promociones_combos_taller')
+            ->where('empresa_id', $empresa->id)
+            ->where('activa', true)
+            ->count();
+
         $transferenciasCount = $conn->schema()->hasTable('transferencias_taller')
             ? $conn->table('transferencias_taller')->where('empresa_id', $empresa->id)->count()
             : 0;
@@ -77,10 +93,10 @@ class TallerComputadorasController extends Controller
                 'equipos_taller.modelo',
             ])
             ->orderByDesc('ordenes_reparacion.id')
-            ->limit(25)
+            ->limit(15)
             ->get();
 
-        return view('giros.reparacion_computadoras.index', [
+        return view('giros.reparacion_computadoras.dashboard', [
             'seccion' => 'dashboard',
             'empresa' => $empresa,
             'template' => $template,
@@ -88,11 +104,16 @@ class TallerComputadorasController extends Controller
             'equipos' => collect(),
             'promociones' => collect(),
             'transferencias' => collect(),
+            'estadosConteo' => $estadosConteo,
             'kpis' => [
-                'ordenes' => $ordenesCount,
+                'ordenes_total' => $ordenesTotal,
+                'ordenes_activas' => $ordenesActivas,
+                'ordenes_listas' => $estadosConteo['listo'] ?? 0,
+                'ordenes_entregadas' => $estadosConteo['entregado'] ?? 0,
                 'equipos' => $equiposCount,
-                'promociones' => $promosCount,
                 'transferencias' => $transferenciasCount,
+                'promociones_total' => $promosTotal,
+                'promociones_activas' => $promosActivas,
             ],
         ]);
     }

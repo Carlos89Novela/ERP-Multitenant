@@ -2,9 +2,13 @@
 
 Plataforma ERP multitenant exclusiva de **CanoDevOps**, respaldada por **MariaDB / MySQL** con **bases de datos independientes** para la plataforma y cada uno de los **5 giros comerciales**, arrancando limpias sin datos de prueba iniciales.
 
-## Autogestión Visual por Giro (Restaurante / Cafetería, Abarrotes y Ferretería)
-- **Restaurante / Cafetería (\/giros/restaurante-cafeteria/autogestion\):** soporte de imagen en recetas/platillos (\imagen_path\ en \erp_restaurante_cafeteria\), logo/íconos y administración de slides y platillos destacados en el carrusel público.
-- **Abarrotes (\/giros/abarrotes/autogestion\) y Ferretería (\/giros/ferreteria/autogestion\):** soporte de imagen en productos (\imagen_path\ en sus respectivas BDs de giro), logo/íconos y administración de slides y promociones/productos destacados en la página pública.
+## Arquitectura de Bases de Datos y Módulos (MariaDB)
+1. \erp_plataforma\ (conexión \mysql\): consola exclusiva de CanoDevOps (\monitoreo\, \empresas\, \acturacion\, \	imbres\, \pariencia\, operador principal inmutable y login por perfil).
+2. \erp_reparacion_computadoras\ (\giros/reparacion_computadoras\): \equipos_taller\, \ordenes_reparacion\, \	ransferencias_taller\, \promociones_combos_taller\, con Dashboard dedicado desde 0 y páginas base según permisos de empresa.
+3. \erp_restaurante_cafeteria\ (\giros/restaurante_cafeteria\): \mesas_restaurante\, \ecetas_platillos\, \comandas_restaurante\, \promociones_combos_restaurante\.
+4. \erp_abarrotes\ (\giros/abarrotes\): \productos_abarrotes\, \promociones_descuentos_abarrotes\.
+5. \erp_ferreteria\ (\giros/ferreteria\): \productos_ferreteria\, \promociones_descuentos_ferreteria\.
+6. \erp_reparacion_celulares\ (\giros/reparacion_celulares\): \equipos_celulares\, \ordenes_reparacion_celulares\, \promociones_combos_celulares\.
 
 ## Flujo de ramas Git
 - \main\: versión estable y aprobada tras pruebas.
@@ -12,5 +16,5 @@ Plataforma ERP multitenant exclusiva de **CanoDevOps**, respaldada por **MariaDB
 - \	est\: rama de pruebas; recibe de \develop\, se prueban cambios y se regresan ajustes a \develop\ antes de unir a \main\.
 
 ## Bitácora de avances
-- **Etapa 1–23:** repositorio limpio, consola separada en páginas independientes, login/logout por perfil, operador principal inmutable, lotes de timbres con XML/PDF, facturación por plazos (1, 3, 6, 9 y 12 meses), tolerancia de licencia, catálogo dinámico por giro, 6 bases de datos en MariaDB, módulos base de los giros, autogestión visual/página pública y autogestión para talleres de cómputo y celulares.
-- **Etapa 24:** autogestión visual con fotos/íconos y carrusel público primero para \estaurante_cafeteria\ y después para \barrotes\ y \erreteria\, incluyendo columnas \imagen_path\ en sus respectivas bases de datos.
+- **Etapa 1–24:** repositorio limpio, consola separada en páginas independientes, login/logout por perfil, operador principal inmutable, lotes de timbres con XML/PDF, facturación por plazos (1, 3, 6, 9 y 12 meses), tolerancia de licencia, catálogo dinámico por giro, 6 bases de datos en MariaDB, módulos base de los giros y autogestión visual/página pública en todos los giros.
+- **Etapa 25:** creación desde 0 del **Dashboard de Reparación de Computadoras** (\esources/views/giros/reparacion_computadoras/dashboard.blade.php\) con KPIs operativos desde \erp_reparacion_computadoras\, desglose por estado de orden, órdenes recientes y navegación filtrada por páginas habilitadas y apariencia autogestionada.
