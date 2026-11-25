@@ -15,6 +15,8 @@ class BolsaTimbresLote extends Model
         'cantidad_comprada',
         'cantidad_disponible',
         'costo_unitario',
+        'xml_path',
+        'pdf_path',
         'fecha_compra',
         'notas',
     ];

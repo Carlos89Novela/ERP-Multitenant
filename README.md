@@ -1,6 +1,6 @@
 ﻿# ERP-Multitenant
 
-Plataforma ERP multitenant organizada por **giro comercial**, **aislamiento de datos sin datos de prueba iniciales**, **gestión de páginas para clientes en renta**, **bolsa mayorista y asignación de timbres**, y **monitoreo técnico de servicios**.
+Plataforma ERP multitenant exclusiva de **CanoDevOps**, organizada por **giro comercial**, **aislamiento de datos sin datos de prueba iniciales**, **gestión de páginas para clientes en renta**, **contabilidad de timbres con comprobantes PDF/XML**, **planes de renta (1, 3, 6, 9 y 12 meses) con facturación a clientes**, **licenciamiento con tolerancia de mes completo** y **monitoreo técnico de servicios**.
 
 ## Giros comerciales soportados
 - \eparacion_computadoras\ (\giros/reparacion_computadoras\)
@@ -12,14 +12,13 @@ Plataforma ERP multitenant organizada por **giro comercial**, **aislamiento de d
 ## Principios y reglas de trabajo
 1. **Separación estricta por giro:** tablas, rutas, vistas y lógica separadas por giro para evitar cruces al modificar código.
 2. **Arranque limpio sin datos de prueba:** las migraciones dejan las tablas listas sin empresas ni registros semilla; las empresas de prueba se crean bajo demanda.
-3. **Consola del proveedor de la plataforma (páginas separadas):**
-   - \/plataforma/monitoreo\: supervisión de disponibilidad de páginas, latencia y saldo/estado de timbres **sin acceso a los datos operativos privados del cliente**.
-   - \/plataforma/empresas\: alta de empresas en renta con \giro_comercial\ fijo/bloqueado, sucursal matriz, páginas habilitadas y cuenta inicial de **Propietario**.
-   - \/plataforma/timbres\: registro de lotes comprados al por mayor (\olsa_timbres_lotes\) y asignación con descuento automático hacia cada empresa (\signaciones_timbres\ + \empresas.saldo_timbres\).
-   - \/plataforma/apariencia\: personalización en vivo desde BD de colores, tipografías, tamaños, bordes, fondos y presets visuales + registro de operador de plataforma.
-4. **Cuenta principal inmutable y acceso por perfil:**
-   - El primer operador registrado se marca como **Operador Principal Inmutable** (\es_operador_principal = true\), con acceso total presente y futuro (incluyendo la gestión de futuros usuarios) y protegido contra eliminación o degradación de privilegios.
-   - \/login\ y \/logout\ redirigen al operador a \/plataforma/monitoreo\ y al propietario de empresa a \/empresa/portal\.
+3. **Consola exclusiva de CanoDevOps (páginas separadas):**
+   - \/plataforma/monitoreo\: supervisión de disponibilidad de páginas, latencia, estado de licencia y saldo/estado de timbres **sin acceso a los datos operativos privados del cliente**.
+   - \/plataforma/empresas\: alta de empresas en renta con \giro_comercial\ fijo/bloqueado, plazo de renta (\1, 3, 6, 9, 12\ meses), vigencia/tolerancia de licencia, páginas habilitadas y cuenta inicial de **Propietario**.
+   - \/plataforma/timbres\: registro de compras mayoristas con carga de **PDF y XML** del proveedor, contabilización automática en bolsa y asignación a empresas.
+   - \/plataforma/facturacion\: emisión/registro de facturas a clientes (renta por plazos o paquetes de timbres), control de pagos y renovaciones de licencia.
+   - \/plataforma/apariencia\: personalización en vivo desde BD del template de la consola de CanoDevOps + gestión de operador principal inmutable y usuarios de plataforma.
+4. **Política de licenciamiento y tolerancia:** al vencer un periodo de renta se contempla un margen de tolerancia (por defecto 30 días / mes completo) antes de suspender por morosidad, evitando cortes prematuros.
 5. **Documentación continua:** todo cambio relevante queda asentado en \README.md\.
 
 ## Flujo de ramas Git
@@ -37,4 +36,5 @@ Plataforma ERP multitenant organizada por **giro comercial**, **aislamiento de d
 - **Etapa 7:** separación de la consola en 4 páginas dedicadas (\/plataforma/monitoreo\, \/plataforma/empresas\, \/plataforma/timbres\ y \/plataforma/apariencia\) compartiendo el template administrable en BD.
 - **Etapa 8:** sistema de login/logout por perfil (\/login\, \/logout\) con redirección a \/plataforma/monitoreo\ para operador y \/empresa/portal\ para propietario de empresa.
 - **Etapa 9:** cuenta principal inmutable de operador de plataforma (\es_operador_principal\) con acceso total y protección contra borrado o degradación.
-- **Siguiente etapa:** gestión de usuarios desde la plataforma y módulos separados por giro comercial (\eparacion_computadoras\, \estaurante_cafeteria\, \barrotes\, \erreteria\, \eparacion_celulares\).
+- **Etapa 10:** base de datos y modelos para comprobantes PDF/XML en compras mayoristas de timbres, plazos de renta (1, 3, 6, 9 y 12 meses), licenciamiento con tolerancia de mes completo y facturación a clientes.
+- **Siguiente etapa:** vistas y acciones en \PlataformaController\ para subir PDF/XML de timbres, gestionar facturación/plazos de clientes y aplicar la regla de tolerancia de licencia.
