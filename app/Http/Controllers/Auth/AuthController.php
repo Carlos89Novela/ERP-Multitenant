@@ -16,17 +16,35 @@ use Illuminate\View\View;
 
 class AuthController extends Controller
 {
-    public function showLogin(Request $request, ?string $slug = null): View
+    private function resolverEmpresaPorContexto(Request $request, ?string $slug = null): ?Empresa
     {
-        $slugEmpresa = $slug ?: trim((string) $request->query('empresa', ''));
-        $empresa = null;
-
+        $slugEmpresa = trim((string) ($slug ?: $request->query('empresa', '')));
         if ($slugEmpresa !== '') {
-            $empresa = Empresa::query()
+            return Empresa::query()
                 ->where('slug', $slugEmpresa)
                 ->where('activa', true)
                 ->firstOrFail();
         }
+
+        $host = preg_replace('/:\d+$/', '', mb_strtolower((string) $request->getHost()));
+        if ($host !== '' && ! in_array($host, ['127.0.0.1', 'localhost', '::1'], true)) {
+            $schema = \Illuminate\Support\Facades\Schema::getConnection();
+            if (\Illuminate\Support\Facades\Schema::hasColumn('empresas', 'dominio')) {
+                $porDominio = Empresa::query()
+                    ->where('activa', true)
+                    ->whereRaw('LOWER(dominio) = ?', [$host])
+                    ->first();
+                if ($porDominio) {
+                    return $porDominio;
+                }
+            }
+        }
+
+        return null;
+    }
+    public function showLogin(Request $request, ?string $slug = null): View
+    {
+        $empresa = $this->resolverEmpresaPorContexto($request, $slug);
 
         if ($empresa) {
             $template = TemplateConfiguracion::query()

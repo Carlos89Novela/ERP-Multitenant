@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $empresa ? "Acceso — {$empresa->nombre}" : 'Acceso a Plataforma — CanoDevOps' }}</title>
+    <title>{{ $empresa ? "Iniciar sesión — {$empresa->nombre}" : 'Iniciar sesión' }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
@@ -58,13 +58,13 @@
                 @endif
                 <div>
                     <span class="text-[11px] font-semibold uppercase tracking-wider tpl-accent">
-                        {{ $empresa ? str_replace('_', ' ', $empresa->giro_comercial) : 'PLATAFORMA CANODEVOPS' }}
+                        {{ $empresa ? str_replace('_', ' ', $empresa->giro_comercial) : 'ACCESO AL SISTEMA' }}
                     </span>
                     <h1 class="text-xl font-bold leading-tight mt-0.5">
-                        {{ $empresa ? $empresa->nombre : 'Consola de Gestión' }}
+                        {{ $empresa ? $empresa->nombre : 'Iniciar sesión' }}
                     </h1>
                     <p class="text-xs tpl-muted mt-0.5">
-                        {{ $empresa ? 'Inicia sesión en el entorno operativo de esta empresa' : 'Acceso administrativo o selección de empresa' }}
+                        {{ $empresa ? 'Inicia sesión en el entorno de esta empresa' : 'Ingresa con tus credenciales' }}
                     </p>
                 </div>
             </div>
@@ -85,7 +85,7 @@
 
                 <div>
                     <label class="block text-xs tpl-muted mb-1">Correo electrónico</label>
-                    <input type="email" name="email" value="{{ old('email') }}" required autofocus placeholder="usuario@empresa.com" class="w-full px-3.5 py-2.5 tpl-surface text-sm">
+                    <input type="email" name="email" value="{{ old('email') }}" required autofocus placeholder="correo@ejemplo.com" class="w-full px-3.5 py-2.5 tpl-surface text-sm">
                 </div>
 
                 <div>
@@ -109,19 +109,6 @@
                     {{ $empresa ? "Entrar a {$empresa->nombre}" : 'Iniciar sesión' }}
                 </button>
             </form>
-
-            @if(!$empresa && $empresasActivas->count() > 0)
-                <div class="pt-4 border-t space-y-2" style="border-color: var(--tpl-border);">
-                    <p class="text-xs tpl-muted">¿Inicias sesión en una empresa específica? Elige su portal ambientado:</p>
-                    <div class="grid grid-cols-1 gap-2">
-                        @foreach($empresasActivas as $empItem)
-                            <a href="{{ route('empresa.login', ['slug' => $empItem->slug]) }}" class="flex items-center justify-between px-3 py-2 tpl-surface text-xs hover:opacity-90">
-                                <span class="font-semibold">{{ $empItem->nombre }}</span>
-                                <span class="tpl-mono tpl-accent">{{ $empItem->slug }} →</span>
-                            </a>
-                        @endforeach
-                    </div>
-                </div>
         </div>
     </div>
 </body>
