@@ -38,6 +38,10 @@ return [
     */
 
     'guards' => [
+        'empresa' => [
+            'driver' => 'session',
+            'provider' => 'usuarios_giro',
+        ],
         'web' => [
             'driver' => 'session',
             'provider' => 'users',
@@ -62,6 +66,10 @@ return [
     */
 
     'providers' => [
+        'usuarios_giro' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\UsuarioGiro::class,
+        ],
         'users' => [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', User::class),

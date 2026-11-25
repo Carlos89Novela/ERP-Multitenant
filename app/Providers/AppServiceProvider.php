@@ -19,6 +19,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if (session()->has('giro_conexion_activa')) {
+            $connActiva = (string) session('giro_conexion_activa');
+            \Illuminate\Support\Facades\Config::set('database.connections.usuario_giro_runtime', config("database.connections.{$connActiva}"));
+            \Illuminate\Support\Facades\DB::purge('usuario_giro_runtime');
+        }
+
         if (file_exists(app_path('Models/UsuarioGiro.php'))) {
             require_once app_path('Models/UsuarioGiro.php');
         }
