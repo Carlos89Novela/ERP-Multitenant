@@ -3,7 +3,7 @@
 Plataforma ERP multitenant exclusiva de **CanoDevOps**, organizada por **giro comercial**, **aislamiento de datos sin datos de prueba iniciales**, **gestión de páginas para clientes en renta**, **contabilidad de timbres con comprobantes PDF/XML**, **planes de renta (1, 3, 6, 9 y 12 meses) con facturación a clientes**, **licenciamiento con tolerancia de mes completo** y **monitoreo técnico de servicios**.
 
 ## Giros comerciales soportados
-- \eparacion_computadoras\ (\giros/reparacion_computadoras\)
+- \eparacion_computadoras\ (\giros/reparacion_computadoras\) — **Módulo base activo** (equipos y órdenes de reparación filtradas por \empresa_id\).
 - \estaurante_cafeteria\ (\giros/restaurante_cafeteria\)
 - \barrotes\ (\giros/abarrotes\)
 - \erreteria\ (\giros/ferreteria\)
@@ -39,4 +39,5 @@ Plataforma ERP multitenant exclusiva de **CanoDevOps**, organizada por **giro co
 - **Etapa 10:** base de datos y modelos para comprobantes PDF/XML en compras mayoristas de timbres, plazos de renta (1, 3, 6, 9 y 12 meses), licenciamiento con tolerancia de mes completo y facturación a clientes.
 - **Etapa 11:** carga y descarga segura de comprobantes XML/PDF en lotes mayoristas de timbres desde \/plataforma/timbres\.
 - **Etapa 12:** plazos de renta (1, 3, 6, 9 y 12 meses), tolerancia de licencia hasta exceder el mes completo y página separada \/plataforma/facturacion\ con aplicación automática de pagos.
-- **Siguiente etapa:** módulos y vistas iniciales separados por giro comercial (\eparacion_computadoras\, \estaurante_cafeteria\, \barrotes\, \erreteria\, \eparacion_celulares\) y paso a la rama \	est\ para pruebas.
+- **Etapa 13:** primer módulo separado por giro en \giros/reparacion_computadoras\ con alta y seguimiento de órdenes aisladas por \empresa_id\.
+- **Siguiente etapa:** módulos base de los demás giros (\estaurante_cafeteria\, \barrotes\, \erreteria\, \eparacion_celulares\) y/o paso a la rama \	est\ para pruebas.

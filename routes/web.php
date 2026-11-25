@@ -38,3 +38,5 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->n
 Route::middleware('auth')->prefix('empresa')->name('empresa.')->group(function () {
     Route::get('/portal', [EmpresaPortalController::class, 'portal'])->name('portal');
 });
+
+require base_path('giros/reparacion_computadoras/routes/web.php');
