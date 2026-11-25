@@ -19,6 +19,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        foreach (glob(base_path('giros/*/routes/web.php')) as $giroRouteFile) {
+            require_once $giroRouteFile;
+        }
+
         if (session()->has('giro_conexion_activa')) {
             $connActiva = (string) session('giro_conexion_activa');
             \Illuminate\Support\Facades\Config::set('database.connections.usuario_giro_runtime', config("database.connections.{$connActiva}"));

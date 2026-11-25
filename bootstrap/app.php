@@ -5,11 +5,16 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 
 return Application::configure(basePath: dirname(__DIR__))
-    ->withRouting(
-        web: __DIR__.'/../routes/web.php',
-        commands: __DIR__.'/../routes/console.php',
-        health: '/up',
-    )
+            ->withRouting(
+            web: __DIR__.'/../routes/web.php',
+            commands: __DIR__.'/../routes/console.php',
+            health: '/up',
+            then: function () {
+                foreach (glob(base_path('giros/*/routes/web.php')) as $giroRouteFile) {
+                    require $giroRouteFile;
+                }
+            },
+        )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'operador.plataforma' => \App\Http\Middleware\AsegurarOperadorPlataforma::class,
