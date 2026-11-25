@@ -63,7 +63,10 @@ class Empresa extends Model
         'compras' => 'Compras y Proveedores',
         'facturacion' => 'Facturación CFDI (Timbres)',
         'ordenes_taller' => 'Órdenes de Reparación (Cómputo/Celulares)',
+        'taller_promociones' => 'Promociones y Combos (Reparaciones)',
         'restaurante_comandas' => 'Comandero, Mesas y KDS',
+        'restaurante_recetas' => 'Recetas y Platillos (Alta / Activar-Desactivar)',
+        'restaurante_promociones' => 'Promociones y Combos (Restaurante)',
         'autogestion_apariencia' => 'Autogestión Visual del Propietario',
     ];
 
@@ -75,6 +78,7 @@ class Empresa extends Model
             'compras',
             'facturacion',
             'ordenes_taller',
+            'taller_promociones',
             'autogestion_apariencia',
         ],
         'reparacion_celulares' => [
@@ -84,6 +88,7 @@ class Empresa extends Model
             'compras',
             'facturacion',
             'ordenes_taller',
+            'taller_promociones',
             'autogestion_apariencia',
         ],
         'restaurante_cafeteria' => [
@@ -93,6 +98,8 @@ class Empresa extends Model
             'compras',
             'facturacion',
             'restaurante_comandas',
+            'restaurante_recetas',
+            'restaurante_promociones',
             'autogestion_apariencia',
         ],
         'abarrotes' => [
