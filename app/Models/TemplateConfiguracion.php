@@ -9,6 +9,9 @@ class TemplateConfiguracion extends Model
     protected $table = 'template_configuraciones';
 
     protected $fillable = [
+        'mostrar_carrusel_publico',
+        'icono_predeterminado',
+        'logo_path',
         'ambito',
         'empresa_id',
         'sucursal_id',

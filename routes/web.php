@@ -45,3 +45,14 @@ require base_path('giros/restaurante_cafeteria/routes/web.php');
 require base_path('giros/abarrotes/routes/web.php');
 require base_path('giros/ferreteria/routes/web.php');
 require base_path('giros/reparacion_celulares/routes/web.php');
+
+use App\Http\Controllers\Empresa\AutogestionPublicaController;
+
+Route::get('/tienda/{slug}', [AutogestionPublicaController::class, 'verPublica'])->name('empresa.publica');
+
+Route::middleware('auth')->prefix('empresa/autogestion')->name('empresa.autogestion.')->group(function () {
+    Route::post('/apariencia', [AutogestionPublicaController::class, 'guardarApariencia'])->name('apariencia');
+    Route::post('/slides', [AutogestionPublicaController::class, 'storeSlide'])->name('slides.store');
+    Route::post('/slides/{slideId}/toggle', [AutogestionPublicaController::class, 'toggleSlide'])->name('slides.toggle');
+    Route::delete('/slides/{slideId}', [AutogestionPublicaController::class, 'destroySlide'])->name('slides.destroy');
+});
