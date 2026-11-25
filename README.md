@@ -1,14 +1,10 @@
 ﻿# ERP-Multitenant
 
-Plataforma ERP multitenant exclusiva de **CanoDevOps**, respaldada por **MariaDB / MySQL** con **bases de datos independientes** para la plataforma y cada uno de los **5 giros comerciales**, arrancando limpias sin datos de prueba iniciales.
+Plataforma ERP multitenant exclusiva de **CanoDevOps**, respaldada por **MariaDB / MySQL** con **bases de datos independientes** para la plataforma y cada uno de los **5 giros comerciales**, arrancando limpias sin datos de prueba iniciales y con login ambientado visualmente por empresa.
 
-## Arquitectura de Bases de Datos y Módulos (MariaDB)
-1. \erp_plataforma\ (conexión \mysql\): consola exclusiva de CanoDevOps (\monitoreo\, \empresas\, \acturacion\, \	imbres\, \pariencia\, operador principal inmutable y login por perfil).
-2. \erp_reparacion_computadoras\ (\giros/reparacion_computadoras\): \equipos_taller\, \ordenes_reparacion\, \	ransferencias_taller\, \promociones_combos_taller\, con Dashboard dedicado desde 0 y páginas base según permisos de empresa.
-3. \erp_restaurante_cafeteria\ (\giros/restaurante_cafeteria\): \mesas_restaurante\, \ecetas_platillos\, \comandas_restaurante\, \promociones_combos_restaurante\.
-4. \erp_abarrotes\ (\giros/abarrotes\): \productos_abarrotes\, \promociones_descuentos_abarrotes\.
-5. \erp_ferreteria\ (\giros/ferreteria\): \productos_ferreteria\, \promociones_descuentos_ferreteria\.
-6. \erp_reparacion_celulares\ (\giros/reparacion_celulares\): \equipos_celulares\, \ordenes_reparacion_celulares\, \promociones_combos_celulares\.
+## Login Ambientado por Empresa
+- **Acceso específico por empresa (\/tienda/{slug}/login\ y \/login?empresa={slug}\):** toma el logo/ícono, colores, tipografía, radio de bordes y giro comercial de la empresa desde su configuración visual, e impide que usuarios de otra empresa o de plataforma entren por error al portal de un cliente distinto.
+- **Acceso general (\/login\):** permite acceso a la consola de CanoDevOps o seleccionar directamente el portal ambientado de cada empresa activa.
 
 ## Flujo de ramas Git
 - \main\: versión estable y aprobada tras pruebas.
@@ -16,5 +12,5 @@ Plataforma ERP multitenant exclusiva de **CanoDevOps**, respaldada por **MariaDB
 - \	est\: rama de pruebas; recibe de \develop\, se prueban cambios y se regresan ajustes a \develop\ antes de unir a \main\.
 
 ## Bitácora de avances
-- **Etapa 1–24:** repositorio limpio, consola separada en páginas independientes, login/logout por perfil, operador principal inmutable, lotes de timbres con XML/PDF, facturación por plazos (1, 3, 6, 9 y 12 meses), tolerancia de licencia, catálogo dinámico por giro, 6 bases de datos en MariaDB, módulos base de los giros y autogestión visual/página pública en todos los giros.
-- **Etapa 25:** creación desde 0 del **Dashboard de Reparación de Computadoras** (\esources/views/giros/reparacion_computadoras/dashboard.blade.php\) con KPIs operativos desde \erp_reparacion_computadoras\, desglose por estado de orden, órdenes recientes y navegación filtrada por páginas habilitadas y apariencia autogestionada.
+- **Etapa 1–26:** repositorio limpio, consola separada en páginas independientes, operador principal inmutable, lotes de timbres con XML/PDF, facturación por plazos (1, 3, 6, 9 y 12 meses), tolerancia de licencia, catálogo dinámico por giro, 6 bases de datos en MariaDB, módulos base de los giros, autogestión visual/página pública, Dashboard de \eparacion_computadoras\, roles por empresa y empresa de prueba.
+- **Etapa 27:** registro PSR-4/autoload de controladores de giros y **Login ambientado visualmente por empresa** (\/tienda/{slug}/login\) con validación estricta de pertenencia a la empresa.

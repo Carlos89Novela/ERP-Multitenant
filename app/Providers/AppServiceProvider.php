@@ -19,6 +19,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        foreach (glob(base_path('giros/*/controllers/*.php')) as $controllerFile) {
+            require_once $controllerFile;
+        }
+
         //
     }
 }

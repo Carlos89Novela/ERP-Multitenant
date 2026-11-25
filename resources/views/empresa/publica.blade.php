@@ -40,7 +40,7 @@
             <div class="flex items-center gap-4 text-xs font-medium">
                 <a href="#carrusel" class="hover:opacity-80">Destacados</a>
                 <a href="#catalogo" class="hover:opacity-80">Oferta / Menú</a>
-                <a href="{{ route('login') }}" class="px-3 py-1.5 rounded font-semibold" style="background-color: var(--pub-primary); color: #09090b;">Acceso</a>
+                <a href="{{ route('empresa.login', ['slug' => $empresa->slug]) }}" class="px-3 py-1.5 rounded font-semibold" style="background-color: var(--pub-primary); color: #09090b;">Acceso</a>
             </div>
         </div>
     </header>

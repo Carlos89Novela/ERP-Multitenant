@@ -27,7 +27,12 @@
             "App\\": "app/",
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/",
-            "Giros\\": "giros/"
+            "Giros\\": "giros/",
+            "Giros\\ReparacionComputadoras\\Controllers\\": "giros/reparacion_computadoras/controllers/",
+            "Giros\\RestauranteCafeteria\\Controllers\\": "giros/restaurante_cafeteria/controllers/",
+            "Giros\\Abarrotes\\Controllers\\": "giros/abarrotes/controllers/",
+            "Giros\\Ferreteria\\Controllers\\": "giros/ferreteria/controllers/",
+            "Giros\\ReparacionCelulares\\Controllers\\": "giros/reparacion_celulares/controllers/"
         }
     },
     "autoload-dev": {

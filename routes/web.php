@@ -49,6 +49,7 @@ require base_path('giros/reparacion_celulares/routes/web.php');
 use App\Http\Controllers\Empresa\AutogestionPublicaController;
 
 Route::get('/tienda/{slug}', [AutogestionPublicaController::class, 'verPublica'])->name('empresa.publica');
+Route::get('/tienda/{slug}/login', [\App\Http\Controllers\Auth\AuthController::class, 'showLogin'])->name('empresa.login');
 
 Route::middleware('auth')->prefix('empresa/autogestion')->name('empresa.autogestion.')->group(function () {
     Route::post('/apariencia', [AutogestionPublicaController::class, 'guardarApariencia'])->name('apariencia');
