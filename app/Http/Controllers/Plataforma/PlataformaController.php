@@ -14,6 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -288,8 +289,30 @@ class PlataformaController extends Controller
             'proveedor' => ['nullable', 'string', 'max:140'],
             'cantidad_comprada' => ['required', 'integer', 'min:1', 'max:10000000'],
             'costo_unitario' => ['nullable', 'numeric', 'min:0'],
+            'archivo_xml' => ['nullable', 'file', 'mimes:xml,text/xml,application/xml', 'max:10240'],
+            'archivo_pdf' => ['nullable', 'file', 'mimes:pdf', 'max:15360'],
             'notas' => ['nullable', 'string', 'max:1000'],
         ]);
+
+        $folioLimpio = Str::slug(trim($data['folio_compra'])) ?: 'lote';
+        $xmlPath = null;
+        $pdfPath = null;
+
+        if ($request->hasFile('archivo_xml')) {
+            $xmlPath = $request->file('archivo_xml')->storeAs(
+                "canodevops/timbres/lotes/{$folioLimpio}",
+                'factura_' . time() . '.xml',
+                'local'
+            );
+        }
+
+        if ($request->hasFile('archivo_pdf')) {
+            $pdfPath = $request->file('archivo_pdf')->storeAs(
+                "canodevops/timbres/lotes/{$folioLimpio}",
+                'factura_' . time() . '.pdf',
+                'local'
+            );
+        }
 
         BolsaTimbresLote::query()->create([
             'folio_compra' => trim($data['folio_compra']),
@@ -297,13 +320,33 @@ class PlataformaController extends Controller
             'cantidad_comprada' => (int) $data['cantidad_comprada'],
             'cantidad_disponible' => (int) $data['cantidad_comprada'],
             'costo_unitario' => $data['costo_unitario'] ?? null,
+            'xml_path' => $xmlPath,
+            'pdf_path' => $pdfPath,
             'fecha_compra' => now(),
             'notas' => $data['notas'] ?? null,
         ]);
 
         return redirect()
             ->route('plataforma.timbres')
-            ->with('status', 'Lote de timbres mayorista agregado a tu bolsa disponible.');
+            ->with('status', 'Lote de timbres mayorista contabilizado y comprobantes guardados.');
+    }
+
+    public function descargarComprobanteLote(BolsaTimbresLote $lote, string $tipo)
+    {
+        $path = match ($tipo) {
+            'xml' => $lote->xml_path,
+            'pdf' => $lote->pdf_path,
+            default => null,
+        };
+
+        if (! $path || ! Storage::disk('local')->exists($path)) {
+            abort(404, 'Comprobante no encontrado para este lote.');
+        }
+
+        $extension = $tipo === 'xml' ? 'xml' : 'pdf';
+        $nombreDescarga = Str::slug($lote->folio_compra) . ".{$extension}";
+
+        return Storage::disk('local')->download($path, $nombreDescarga);
     }
 
     public function asignarTimbresEmpresa(Request $request): RedirectResponse

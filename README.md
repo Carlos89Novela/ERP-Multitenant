@@ -15,7 +15,7 @@ Plataforma ERP multitenant exclusiva de **CanoDevOps**, organizada por **giro co
 3. **Consola exclusiva de CanoDevOps (páginas separadas):**
    - \/plataforma/monitoreo\: supervisión de disponibilidad de páginas, latencia, estado de licencia y saldo/estado de timbres **sin acceso a los datos operativos privados del cliente**.
    - \/plataforma/empresas\: alta de empresas en renta con \giro_comercial\ fijo/bloqueado, plazo de renta (\1, 3, 6, 9, 12\ meses), vigencia/tolerancia de licencia, páginas habilitadas y cuenta inicial de **Propietario**.
-   - \/plataforma/timbres\: registro de compras mayoristas con carga de **PDF y XML** del proveedor, contabilización automática en bolsa y asignación a empresas.
+   - \/plataforma/timbres\: registro de compras mayoristas con carga y descarga segura de **PDF y XML** del proveedor, contabilización automática en bolsa y asignación a empresas.
    - \/plataforma/facturacion\: emisión/registro de facturas a clientes (renta por plazos o paquetes de timbres), control de pagos y renovaciones de licencia.
    - \/plataforma/apariencia\: personalización en vivo desde BD del template de la consola de CanoDevOps + gestión de operador principal inmutable y usuarios de plataforma.
 4. **Política de licenciamiento y tolerancia:** al vencer un periodo de renta se contempla un margen de tolerancia (por defecto 30 días / mes completo) antes de suspender por morosidad, evitando cortes prematuros.
@@ -37,4 +37,5 @@ Plataforma ERP multitenant exclusiva de **CanoDevOps**, organizada por **giro co
 - **Etapa 8:** sistema de login/logout por perfil (\/login\, \/logout\) con redirección a \/plataforma/monitoreo\ para operador y \/empresa/portal\ para propietario de empresa.
 - **Etapa 9:** cuenta principal inmutable de operador de plataforma (\es_operador_principal\) con acceso total y protección contra borrado o degradación.
 - **Etapa 10:** base de datos y modelos para comprobantes PDF/XML en compras mayoristas de timbres, plazos de renta (1, 3, 6, 9 y 12 meses), licenciamiento con tolerancia de mes completo y facturación a clientes.
-- **Siguiente etapa:** vistas y acciones en \PlataformaController\ para subir PDF/XML de timbres, gestionar facturación/plazos de clientes y aplicar la regla de tolerancia de licencia.
+- **Etapa 11:** carga y descarga segura de comprobantes XML/PDF en lotes mayoristas de timbres desde \/plataforma/timbres\.
+- **Siguiente etapa:** planes de renta (1, 3, 6, 9 y 12 meses), licenciamiento con tolerancia de mes completo y sección de facturación a clientes (\/plataforma/facturacion\).

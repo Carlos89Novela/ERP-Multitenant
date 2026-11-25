@@ -8,7 +8,7 @@
 <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <div class="tpl-card p-6 space-y-4">
         <h2 class="text-lg font-semibold">1. Comprar Lote de Timbres al por Mayor</h2>
-        <form method="POST" action="{{ route('plataforma.timbres.lote') }}" class="space-y-3">
+        <form method="POST" action="{{ route('plataforma.timbres.lote') }}" enctype="multipart/form-data" class="space-y-3">
             @csrf
             <div>
                 <label class="block text-xs tpl-muted mb-1">Folio / Factura de compra mayorista</label>
@@ -28,6 +28,16 @@
                 <label class="block text-xs tpl-muted mb-1">Costo unitario (opcional)</label>
                 <input type="number" step="0.0001" name="costo_unitario" placeholder="0.3500" class="w-full px-3 py-2 tpl-surface text-sm tpl-mono">
             </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs tpl-muted mb-1">Factura XML del proveedor (opcional)</label>
+                    <input type="file" name="archivo_xml" accept=".xml,text/xml,application/xml" class="w-full px-3 py-2 tpl-surface text-xs">
+                </div>
+                <div>
+                    <label class="block text-xs tpl-muted mb-1">Factura PDF del proveedor (opcional)</label>
+                    <input type="file" name="archivo_pdf" accept=".pdf,application/pdf" class="w-full px-3 py-2 tpl-surface text-xs">
+                </div>
+            </div>
             <button type="submit" class="px-4 py-2 text-sm font-medium tpl-btn-primary">Registrar compra en mi bolsa</button>
         </form>
 
@@ -39,9 +49,17 @@
                         <span class="font-semibold tpl-mono">{{ $lote->folio_compra }}</span>
                         <span class="tpl-muted">({{ $lote->proveedor }})</span>
                     </div>
-                    <span class="tpl-mono tpl-accent font-semibold">
-                        {{ number_format($lote->cantidad_disponible) }} / {{ number_format($lote->cantidad_comprada) }}
-                    </span>
+                    <div class="flex items-center gap-2">
+                        @if($lote->xml_path)
+                            <a href="{{ route('plataforma.timbres.comprobante', ['lote' => $lote->id, 'tipo' => 'xml']) }}" class="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 hover:underline">XML</a>
+                        @endif
+                        @if($lote->pdf_path)
+                            <a href="{{ route('plataforma.timbres.comprobante', ['lote' => $lote->id, 'tipo' => 'pdf']) }}" class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 hover:underline">PDF</a>
+                        @endif
+                        <span class="tpl-mono tpl-accent font-semibold">
+                            {{ number_format($lote->cantidad_disponible) }} / {{ number_format($lote->cantidad_comprada) }}
+                        </span>
+                    </div>
                 </div>
             @empty
                 <p class="text-xs tpl-muted">Aún no has registrado lotes mayoristas.</p>

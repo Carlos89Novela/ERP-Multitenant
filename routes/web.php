@@ -20,6 +20,7 @@ Route::prefix('plataforma')->name('plataforma.')->middleware('operador.plataform
     Route::post('/empresas/{empresa}/servicio', [PlataformaController::class, 'actualizarEstadoEmpresa'])->name('empresas.servicio');
     Route::post('/empresas/{empresa}/ping', [PlataformaController::class, 'pingMonitoreo'])->name('empresas.ping');
     Route::post('/timbres/lote', [PlataformaController::class, 'comprarLoteTimbres'])->name('timbres.lote');
+    Route::get('/timbres/lote/{lote}/comprobante/{tipo}', [PlataformaController::class, 'descargarComprobanteLote'])->name('timbres.comprobante');
     Route::post('/timbres/asignar', [PlataformaController::class, 'asignarTimbresEmpresa'])->name('timbres.asignar');
     Route::post('/operador', [PlataformaController::class, 'registrarOperador'])->name('operador.store');
 });
