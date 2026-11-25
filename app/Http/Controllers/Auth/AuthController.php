@@ -144,4 +144,61 @@ class AuthController extends Controller
 
         return redirect()->route('login');
     }
+
+    public function showCambioPasswordForzoso(Request $request): View|RedirectResponse
+    {
+        $usuario = $request->user('empresa');
+        if (! $usuario) {
+            return redirect()->route('login');
+        }
+
+        if (! (bool) ($usuario->debe_cambiar_password ?? false)) {
+            return redirect()->route('giro.computadoras.index');
+        }
+
+        $empresa = Empresa::query()->find((int) $usuario->empresa_id);
+        $template = $empresa
+            ? (TemplateConfiguracion::query()->where('empresa_id', $empresa->id)->where('activo', true)->orderByDesc('id')->first()
+                ?? new TemplateConfiguracion(TemplateConfiguracion::defaultsPlataforma()))
+            : new TemplateConfiguracion(TemplateConfiguracion::defaultsPlataforma());
+
+        return view('auth.cambio-password', [
+            'usuario' => $usuario,
+            'empresa' => $empresa,
+            'template' => $template,
+        ]);
+    }
+
+    public function actualizarPasswordForzoso(Request $request): RedirectResponse
+    {
+        $usuario = $request->user('empresa');
+        if (! $usuario) {
+            return redirect()->route('login');
+        }
+
+        $data = $request->validate([
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $empresa = Empresa::query()->findOrFail((int) $usuario->empresa_id);
+        $connGiro = UsuarioGiro::conexionPorGiro($empresa->giro_comercial);
+        Config::set('database.connections.usuario_giro_runtime', config("database.connections.{$connGiro}"));
+        DB::purge('usuario_giro_runtime');
+
+        UsuarioGiro::on('usuario_giro_runtime')
+            ->where('id', $usuario->id)
+            ->where('empresa_id', $empresa->id)
+            ->update([
+                'password' => Hash::make($data['password']),
+                'debe_cambiar_password' => false,
+                'password_temporal_generada_at' => null,
+                'updated_at' => now(),
+            ]);
+
+        if ($empresa->giro_comercial === 'reparacion_computadoras') {
+            return redirect()->route('giro.computadoras.index')->with('status', 'Contraseña actualizada. Bienvenido al sistema.');
+        }
+
+        return redirect()->route('empresa.portal')->with('status', 'Contraseña actualizada. Bienvenido al sistema.');
+    }
 }

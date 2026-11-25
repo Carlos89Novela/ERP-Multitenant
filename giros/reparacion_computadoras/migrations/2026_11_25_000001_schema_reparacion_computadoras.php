@@ -18,6 +18,8 @@ return new class extends Migration
                 $table->string('email', 160);
                 $table->string('password');
                 $table->string('rol_empresa', 40)->default('propietario')->index();
+                $table->boolean('debe_cambiar_password')->default(false);
+                $table->timestamp('password_temporal_generada_at')->nullable();
                 $table->boolean('activo')->default(true);
                 $table->rememberToken();
                 $table->timestamps();

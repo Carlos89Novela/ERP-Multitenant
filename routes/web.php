@@ -57,3 +57,34 @@ Route::middleware('auth')->prefix('empresa/autogestion')->name('empresa.autogest
     Route::post('/slides/{slideId}/toggle', [AutogestionPublicaController::class, 'toggleSlide'])->name('slides.toggle');
     Route::delete('/slides/{slideId}', [AutogestionPublicaController::class, 'destroySlide'])->name('slides.destroy');
 });
+
+Route::middleware('auth:empresa')->group(function () {
+    Route::get('/empresa/cambiar-password-obligatorio', [\App\Http\Controllers\Auth\AuthController::class, 'showCambioPasswordForzoso'])->name('empresa.password.forzoso');
+    Route::post('/empresa/cambiar-password-obligatorio', [\App\Http\Controllers\Auth\AuthController::class, 'actualizarPasswordForzoso'])->name('empresa.password.forzoso.update');
+});
+
+Route::middleware('auth:web')->post('/plataforma/empresas/{empresaId}/reset-password-propietario', function (\Illuminate\Http\Request $request, int $empresaId) {
+    $empresa = \App\Models\Empresa::query()->findOrFail($empresaId);
+    $connGiro = \App\Models\UsuarioGiro::conexionPorGiro($empresa->giro_comercial);
+    \Illuminate\Support\Facades\Config::set('database.connections.usuario_giro_runtime', config("database.connections.{$connGiro}"));
+    \Illuminate\Support\Facades\DB::purge('usuario_giro_runtime');
+
+    $propietario = \App\Models\UsuarioGiro::on('usuario_giro_runtime')
+        ->where('empresa_id', $empresa->id)
+        ->where('rol_empresa', 'propietario')
+        ->orderBy('id')
+        ->first();
+
+    if (! $propietario) {
+        return back()->withErrors(['email' => 'No existe un usuario propietario registrado en la BD del giro para esta empresa.']);
+    }
+
+    $temporal = 'CanoTemp' . random_int(1000, 9999) . '!';
+    $propietario->update([
+        'password' => \Illuminate\Support\Facades\Hash::make($temporal),
+        'debe_cambiar_password' => true,
+        'password_temporal_generada_at' => now(),
+    ]);
+
+    return back()->with('status', "Contraseña temporal generada para {$propietario->email}: {$temporal} (se exigirá cambio al ingresar).");
+})->name('plataforma.empresas.reset_password_propietario');
