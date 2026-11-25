@@ -8,5 +8,5 @@ Plataforma ERP multitenant exclusiva de **CanoDevOps**, respaldada por **MariaDB
 - \	est\: rama de pruebas; recibe de \develop\, se prueban cambios y se regresan ajustes a \develop\ antes de unir a \main\.
 
 ## Bitácora de avances
-- **Etapa 1–32:** consola de plataforma, lotes de timbres con XML/PDF, facturación por plazos, tolerancia de licencia, catálogo dinámico por giro, 6 BDs en MariaDB, autogestión visual con fotos/íconos, página pública con carrusel, Dashboard de \eparacion_computadoras\, login ambientado por empresa, migraciones consolidadas y tabla \usuarios_empresa\ por giro con cambio forzoso.
-- **Etapa 33:** ruta dedicada \POST /tienda/{slug}/login\ (\empresa.login.submit\) para evitar colisiones de ruta al autenticar usuarios en \usuarios_empresa\ de cada giro.
+- **Etapa 1–33:** consola de plataforma, lotes de timbres con XML/PDF, facturación por plazos, tolerancia de licencia, catálogo dinámico por giro, 6 BDs en MariaDB, autogestión visual con fotos/íconos, página pública con carrusel, Dashboard de \eparacion_computadoras\, login ambientado por empresa y ruta dedicada \POST /tienda/{slug}/login\.
+- **Etapa 34:** creación y carga garantizada de \App\Models\UsuarioGiro\ en \pp/Models/UsuarioGiro.php\.
