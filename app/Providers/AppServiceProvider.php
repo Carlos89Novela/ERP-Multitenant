@@ -2,7 +2,6 @@
 
 namespace App\Providers;
 
-use App\Models\UsuarioGiro;
 use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
@@ -10,6 +9,17 @@ use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
+    public static function aplicarConexionGiroDesdeSesion(): void
+    {
+        if (session()->has('giro_conexion_activa')) {
+            $connActiva = (string) session('giro_conexion_activa');
+            if ($connActiva !== '' && config()->has("database.connections.{$connActiva}")) {
+                Config::set('database.connections.usuario_giro_runtime', config("database.connections.{$connActiva}"));
+                DB::purge('usuario_giro_runtime');
+            }
+        }
+    }
+
     public function register(): void
     {
         if (file_exists(app_path('Models/UsuarioGiro.php'))) {
@@ -27,15 +37,11 @@ class AppServiceProvider extends ServiceProvider
             require_once $giroRouteFile;
         }
 
-        if (session()->has('giro_conexion_activa')) {
-            $connActiva = (string) session('giro_conexion_activa');
-            if (config()->has("database.connections.{$connActiva}")) {
-                Config::set('database.connections.usuario_giro_runtime', config("database.connections.{$connActiva}"));
-                DB::purge('usuario_giro_runtime');
-            }
-        }
+        // Aplicar conexion de giro en cada resolucion del contenedor para que Auth::guard('empresa') la tenga lista
+        $this->app->resolving(function ($object) {
+            static::aplicarConexionGiroDesdeSesion();
+        });
 
-        // Si un middleware 'auth' sin guard explicito es invocado dentro de /giros/ o /empresa/, usar guard 'empresa'
         Authenticate::redirectUsing(function ($request) {
             $slugSesion = (string) session('empresa_slug_activa', '');
             if ($slugSesion !== '') {
