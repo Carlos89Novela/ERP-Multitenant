@@ -6,8 +6,8 @@ Plataforma ERP multitenant exclusiva de **CanoDevOps**, organizada por **giro co
 - \eparacion_computadoras\ (\giros/reparacion_computadoras\): **Órdenes de Reparación** + **Promociones y Combos (Reparaciones)**.
 - \eparacion_celulares\ (\giros/reparacion_celulares\): **Órdenes de Reparación** + **Promociones y Combos (Reparaciones)**.
 - \estaurante_cafeteria\ (\giros/restaurante_cafeteria\): **Comandero, Mesas y KDS** + **Recetas y Platillos (Alta / Activar-Desactivar)** + **Promociones y Combos (Restaurante)**.
-- \barrotes\ (\giros/abarrotes\): módulos comerciales base (sin comandero ni órdenes de reparación).
-- \erreteria\ (\giros/ferreteria\): módulos comerciales base (sin comandero ni órdenes de reparación).
+- \barrotes\ (\giros/abarrotes\): módulos comerciales base + **Promociones y Descuentos (Abarrotes)**.
+- \erreteria\ (\giros/ferreteria\): módulos comerciales base + **Promociones y Descuentos (Ferretería)**.
 
 ## Principios y reglas de trabajo
 1. **Separación estricta por giro y catálogo dinámico de páginas:** al dar de alta una empresa en \/plataforma/empresas\, tanto el formulario como el servidor filtran automáticamente las páginas disponibles según el \giro_comercial\ elegido.
@@ -27,5 +27,5 @@ Plataforma ERP multitenant exclusiva de **CanoDevOps**, organizada por **giro co
 - \	est\: rama de pruebas; recibe de \develop\, se prueban cambios y se regresan ajustes a \develop\ antes de unir a \main\.
 
 ## Bitácora de avances
-- **Etapa 1–14:** repositorio limpio, migraciones base sin datos de prueba, consola separada en páginas independientes, login/logout por perfil, operador principal inmutable, lotes de timbres con XML/PDF, facturación por plazos (1, 3, 6, 9 y 12 meses), tolerancia de licencia, módulo inicial de \eparacion_computadoras\ y filtrado dinámico por giro.
-- **Etapa 15:** incorporación de páginas específicas al catálogo por giro: **Recetas y Platillos** y **Promociones y Combos (Restaurante)** para \estaurante_cafeteria\, y **Promociones y Combos (Reparaciones)** para \eparacion_computadoras\ y \eparacion_celulares\.
+- **Etapa 1–15:** repositorio limpio, migraciones base sin datos de prueba, consola separada en páginas independientes, login/logout por perfil, operador principal inmutable, lotes de timbres con XML/PDF, facturación por plazos (1, 3, 6, 9 y 12 meses), tolerancia de licencia, módulo inicial de \eparacion_computadoras\ y catálogo dinámico por giro con recetas y promociones en talleres y restaurantes.
+- **Etapa 16:** incorporación de **Promociones y Descuentos (Abarrotes)** y **Promociones y Descuentos (Ferretería)** al catálogo dinámico por giro.

@@ -67,6 +67,8 @@ class Empresa extends Model
         'restaurante_comandas' => 'Comandero, Mesas y KDS',
         'restaurante_recetas' => 'Recetas y Platillos (Alta / Activar-Desactivar)',
         'restaurante_promociones' => 'Promociones y Combos (Restaurante)',
+        'abarrotes_promociones' => 'Promociones y Descuentos (Abarrotes)',
+        'ferreteria_promociones' => 'Promociones y Descuentos (Ferretería)',
         'autogestion_apariencia' => 'Autogestión Visual del Propietario',
     ];
 
@@ -108,6 +110,7 @@ class Empresa extends Model
             'inventario',
             'compras',
             'facturacion',
+            'abarrotes_promociones',
             'autogestion_apariencia',
         ],
         'ferreteria' => [
@@ -116,6 +119,7 @@ class Empresa extends Model
             'inventario',
             'compras',
             'facturacion',
+            'ferreteria_promociones',
             'autogestion_apariencia',
         ],
     ];
