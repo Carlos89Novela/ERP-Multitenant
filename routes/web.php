@@ -42,3 +42,6 @@ Route::middleware('auth')->prefix('empresa')->name('empresa.')->group(function (
 require base_path('giros/reparacion_computadoras/routes/web.php');
 
 require base_path('giros/restaurante_cafeteria/routes/web.php');
+require base_path('giros/abarrotes/routes/web.php');
+require base_path('giros/ferreteria/routes/web.php');
+require base_path('giros/reparacion_celulares/routes/web.php');
