@@ -46,4 +46,16 @@ class UsuarioGiro extends Authenticatable
             default => 'mysql',
         };
     }
+
+    public function __wakeup(): void
+    {
+        if (function_exists('session') && session()->has('giro_conexion_activa')) {
+            $connActiva = (string) session('giro_conexion_activa');
+            if ($connActiva !== '' && config()->has("database.connections.{$connActiva}")) {
+                \Illuminate\Support\Facades\Config::set('database.connections.usuario_giro_runtime', config("database.connections.{$connActiva}"));
+                \Illuminate\Support\Facades\DB::purge('usuario_giro_runtime');
+            }
+        }
+        $this->setConnection('usuario_giro_runtime');
+    }
 }
