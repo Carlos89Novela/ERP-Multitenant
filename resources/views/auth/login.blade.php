@@ -122,13 +122,6 @@
                         @endforeach
                     </div>
                 </div>
-            @elseif($empresa)
-                <div class="pt-3 border-t text-center" style="border-color: var(--tpl-border);">
-                    <a href="{{ route('login') }}" class="text-xs tpl-muted hover:underline">
-                        Cambiar de empresa o acceso plataforma
-                    </a>
-                </div>
-            @endif
         </div>
     </div>
 </body>
