@@ -396,6 +396,9 @@ class PlataformaController extends Controller
             'password' => ['required', 'string', 'min:8', 'max:120'],
         ]);
 
+        $esPrimero = ! User::query()->where('es_operador_principal', true)->exists()
+            && ! User::query()->where('es_operador_plataforma', true)->exists();
+
         User::query()->create([
             'name' => trim($data['name']),
             'email' => strtolower(trim($data['email'])),
@@ -405,10 +408,16 @@ class PlataformaController extends Controller
             'es_propietario' => false,
             'puede_autogestionar_template' => false,
             'es_operador_plataforma' => true,
+            'es_operador_principal' => $esPrimero,
         ]);
 
         return redirect()
             ->route('plataforma.apariencia')
-            ->with('status', 'Cuenta de Operador de Plataforma creada correctamente.');
+            ->with(
+                'status',
+                $esPrimero
+                    ? 'Cuenta PRINCIPAL e inmutable de Operador de Plataforma creada con acceso total.'
+                    : 'Cuenta secundaria de Operador de Plataforma creada correctamente.'
+            );
     }
 }

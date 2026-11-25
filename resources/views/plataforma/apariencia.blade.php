@@ -108,7 +108,7 @@
         <div class="flex items-center justify-between">
             <div>
                 <h2 class="text-lg font-semibold">2. Cuenta de Operador de Plataforma</h2>
-                <p class="text-xs tpl-muted">Operadores registrados actualmente: <span class="tpl-mono tpl-accent font-semibold">{{ $operadoresCount }}</span></p>
+                <p class="text-xs tpl-muted">Operadores registrados actualmente: <span class="tpl-mono tpl-accent font-semibold">{{ $operadoresCount }}</span> • El primer operador queda como <span class="tpl-accent font-semibold">Cuenta Principal Inmutable</span> con acceso total.</p>
             </div>
         </div>
         <form method="POST" action="{{ route('plataforma.operador.store') }}" class="grid grid-cols-1 md:grid-cols-3 gap-4">
