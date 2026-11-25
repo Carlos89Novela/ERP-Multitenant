@@ -20,7 +20,7 @@
             </div>
             <div>
                 <label class="block text-xs tpl-muted mb-1">Giro comercial (queda fijo al crear)</label>
-                <select name="giro_comercial" required class="w-full px-3 py-2 tpl-surface text-sm">
+                <select id="select-giro-comercial" name="giro_comercial" required onchange="filtrarPaginasPorGiro()" class="w-full px-3 py-2 tpl-surface text-sm">
                     @foreach($girosDisponibles as $key => $label)
                         <option value="{{ $key }}">{{ $label }}</option>
                     @endforeach
@@ -36,9 +36,9 @@
             </div>
             <div class="md:col-span-2">
                 <label class="block text-xs tpl-muted mb-2">Páginas habilitadas para este cliente</label>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                <div id="grid-paginas-giro" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                     @foreach($paginasCatalogo as $clave => $tituloPagina)
-                        <label class="flex items-center gap-2 p-2.5 tpl-surface text-xs cursor-pointer">
+                        <label data-pagina-clave="{{ $clave }}" class="flex items-center gap-2 p-2.5 tpl-surface text-xs cursor-pointer">
                             <input type="checkbox" name="paginas_habilitadas[]" value="{{ $clave }}" checked>
                             <span>{{ $tituloPagina }}</span>
                         </label>
@@ -111,3 +111,40 @@
     </section>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    const PAGINAS_POR_GIRO = @json($paginasPorGiro);
+
+    function filtrarPaginasPorGiro() {
+        const select = document.getElementById('select-giro-comercial');
+        const grid = document.getElementById('grid-paginas-giro');
+        if (!select || !grid) return;
+
+        const giro = select.value;
+        const permitidas = PAGINAS_POR_GIRO[giro] || [];
+
+        grid.querySelectorAll('[data-pagina-clave]').forEach((item) => {
+            const clave = item.getAttribute('data-pagina-clave');
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            const esPermitida = permitidas.includes(clave);
+
+            if (esPermitida) {
+                item.style.display = '';
+                if (checkbox) {
+                    checkbox.disabled = false;
+                    checkbox.checked = true;
+                }
+            } else {
+                item.style.display = 'none';
+                if (checkbox) {
+                    checkbox.checked = false;
+                    checkbox.disabled = true;
+                }
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', filtrarPaginasPorGiro);
+</script>
+@endpush

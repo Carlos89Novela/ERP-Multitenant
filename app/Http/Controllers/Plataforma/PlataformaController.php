@@ -85,6 +85,7 @@ class PlataformaController extends Controller
             'empresas' => $empresas,
             'girosDisponibles' => Empresa::GIROS_DISPONIBLES,
             'paginasCatalogo' => Empresa::PAGINAS_CATALOGO,
+            'paginasPorGiro' => Empresa::PAGINAS_POR_GIRO,
         ]);
     }
 
@@ -101,6 +102,7 @@ class PlataformaController extends Controller
             'empresas' => $empresas,
             'girosDisponibles' => Empresa::GIROS_DISPONIBLES,
             'paginasCatalogo' => Empresa::PAGINAS_CATALOGO,
+            'paginasPorGiro' => Empresa::PAGINAS_POR_GIRO,
         ]);
     }
 
@@ -215,9 +217,10 @@ class PlataformaController extends Controller
                 $contador++;
             }
 
+            $permitidasGiro = array_keys(Empresa::paginasPermitidasParaGiro($data['giro_comercial']));
             $paginas = array_values(array_intersect(
                 $data['paginas_habilitadas'] ?? ['dashboard'],
-                array_keys(Empresa::PAGINAS_CATALOGO)
+                $permitidasGiro
             ));
 
             $plazoMeses = (int) ($data['plazo_meses'] ?? 1);
@@ -286,9 +289,10 @@ class PlataformaController extends Controller
             'paginas_habilitadas.*' => ['string', 'max:60'],
         ]);
 
+        $permitidasGiro = array_keys(Empresa::paginasPermitidasParaGiro($empresa->giro_comercial));
         $paginas = array_values(array_intersect(
             $data['paginas_habilitadas'] ?? [],
-            array_keys(Empresa::PAGINAS_CATALOGO)
+            $permitidasGiro
         ));
 
         $empresa->update([

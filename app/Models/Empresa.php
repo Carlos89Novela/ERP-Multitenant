@@ -67,6 +67,65 @@ class Empresa extends Model
         'autogestion_apariencia' => 'Autogestión Visual del Propietario',
     ];
 
+    public const PAGINAS_POR_GIRO = [
+        'reparacion_computadoras' => [
+            'dashboard',
+            'pos',
+            'inventario',
+            'compras',
+            'facturacion',
+            'ordenes_taller',
+            'autogestion_apariencia',
+        ],
+        'reparacion_celulares' => [
+            'dashboard',
+            'pos',
+            'inventario',
+            'compras',
+            'facturacion',
+            'ordenes_taller',
+            'autogestion_apariencia',
+        ],
+        'restaurante_cafeteria' => [
+            'dashboard',
+            'pos',
+            'inventario',
+            'compras',
+            'facturacion',
+            'restaurante_comandas',
+            'autogestion_apariencia',
+        ],
+        'abarrotes' => [
+            'dashboard',
+            'pos',
+            'inventario',
+            'compras',
+            'facturacion',
+            'autogestion_apariencia',
+        ],
+        'ferreteria' => [
+            'dashboard',
+            'pos',
+            'inventario',
+            'compras',
+            'facturacion',
+            'autogestion_apariencia',
+        ],
+    ];
+
+    public static function paginasPermitidasParaGiro(string $giro): array
+    {
+        $claves = self::PAGINAS_POR_GIRO[$giro] ?? array_keys(self::PAGINAS_CATALOGO);
+        $resultado = [];
+        foreach ($claves as $clave) {
+            if (isset(self::PAGINAS_CATALOGO[$clave])) {
+                $resultado[$clave] = self::PAGINAS_CATALOGO[$clave];
+            }
+        }
+
+        return $resultado;
+    }
+
     public function evaluarEstadoLicenciaEfectivo(): string
     {
         if (! $this->fecha_vencimiento_licencia) {
