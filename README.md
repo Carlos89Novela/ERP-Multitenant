@@ -29,4 +29,5 @@ Plataforma ERP multitenant organizada por **giro comercial**, **aislamiento de d
 - **Etapa 2:** base Laravel limpia y \README.md\ inicial en \develop\.
 - **Etapa 3:** migraciones base en blanco para multitenant, autogestión de páginas/templates, compra/asignación mayorista de timbres, monitoreo de servicios (sin acceso a datos de negocio del cliente) y tablas base para los 5 giros.
 - **Etapa 4:** modelos Eloquent base y Consola de Plataforma (\/plataforma\) con selector/editor de template propio en BD, alta de empresas en renta, compra mayorista/asignación de timbres y monitor técnico de servicio.
-- **Siguiente etapa:** configurar base de datos en \.env\, ejecutar \php artisan migrate\, proteger \/plataforma\ con middleware de operador de plataforma y construir los módulos separados por giro.
+- **Etapa 5:** ejecución inicial de migraciones limpias en base de datos vacía y validación de \/plataforma\.
+- **Siguiente etapa:** guardia de acceso para operador de plataforma, alta de cuenta Propietario por empresa y módulos operativos por giro.
