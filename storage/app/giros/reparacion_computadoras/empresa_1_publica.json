@@ -1,0 +1,38 @@
+{
+    "hero_badge": "Servicio técnico especializado",
+    "hero_titulo": "Diagnóstico, reparación y mantenimiento de laptops y PCs",
+    "descripcion": "",
+    "telefono": "",
+    "whatsapp": "",
+    "direccion": "",
+    "horario": "Lun - Vie 9:00 a 18:00",
+    "fuente_familia": "Inter, system-ui, -apple-system, sans-serif",
+    "color_primario": "#823cec",
+    "color_acento": "#1fbbdb",
+    "icono_predeterminado": "💻",
+    "color_fondo": "#09090b",
+    "color_tarjeta": "#111115",
+    "imagenes": [
+        {
+            "id": "fe2d0013-5c80-4001-9967-7e0d8379a6db",
+            "url": "\/uploads\/giros\/reparacion_computadoras\/empresa_1\/slide_1795645808_ZeULgH.jpeg",
+            "titulo": "",
+            "subtitulo": ""
+        }
+    ],
+    "servicios": [
+        {
+            "titulo": "Diagnóstico y hardware",
+            "descripcion": "Revisión de fuente, tarjeta madre, pantallas, teclados, baterías y ventilación."
+        },
+        {
+            "titulo": "Almacenamiento y velocidad",
+            "descripcion": "Migración a SSD\/NVMe, ampliación de memoria RAM y limpieza térmica preventiva."
+        },
+        {
+            "titulo": "Sistema y respaldo",
+            "descripcion": "Instalación limpia de sistema operativo, controladores, antivirus y respaldo de datos."
+        }
+    ],
+    "promociones": []
+}

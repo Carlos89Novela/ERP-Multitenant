@@ -69,7 +69,11 @@ class DashboardTallerController extends Controller
                 ->count();
         }
 
+        require_once __DIR__ . '/AutogestionTallerController.php';
+        $configInternas = AutogestionTallerController::cargarConfiguracionPorAmbito((int) $usuario->empresa_id, 'internas');
+
         return view('taller_computadoras::dashboard', [
+            'configInternas' => $configInternas,
             'usuario' => $usuario,
             'empresa' => $empresa,
             'template' => $template,

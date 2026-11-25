@@ -1,5 +1,8 @@
 <?php
 
+require_once __DIR__ . '/../controllers/AutogestionTallerController.php';
+
+use Giros\ReparacionComputadoras\Controllers\AutogestionTallerController;
 require_once __DIR__ . '/../controllers/PublicaTallerController.php';
 
 use Giros\ReparacionComputadoras\Controllers\PublicaTallerController;
@@ -32,4 +35,23 @@ Route::middleware('web')->prefix('giros/reparacion-computadoras')->group(functio
         ->name('taller.computadoras.publica');
     Route::get('/publica/{slug}', [PublicaTallerController::class, 'show'])
         ->name('taller.computadoras.publica.slug');
+});
+
+Route::middleware(['web', AutenticadoTaller::class])->prefix('giros/reparacion-computadoras')->group(function () {
+    Route::get('/autogestion', [AutogestionTallerController::class, 'edit'])
+        ->name('taller.computadoras.autogestion');
+    Route::post('/autogestion/general', [AutogestionTallerController::class, 'updateGeneral'])
+        ->name('taller.computadoras.autogestion.general');
+    Route::post('/autogestion/imagenes', [AutogestionTallerController::class, 'agregarImagen'])
+        ->name('taller.computadoras.autogestion.imagenes.store');
+    Route::delete('/autogestion/imagenes/{imagenId}', [AutogestionTallerController::class, 'eliminarImagen'])
+        ->name('taller.computadoras.autogestion.imagenes.destroy');
+    Route::post('/autogestion/servicios', [AutogestionTallerController::class, 'agregarServicio'])
+        ->name('taller.computadoras.autogestion.servicios.store');
+    Route::delete('/autogestion/servicios/{indice}', [AutogestionTallerController::class, 'eliminarServicio'])
+        ->name('taller.computadoras.autogestion.servicios.destroy');
+    Route::post('/autogestion/promociones', [AutogestionTallerController::class, 'agregarPromocion'])
+        ->name('taller.computadoras.autogestion.promociones.store');
+    Route::delete('/autogestion/promociones/{indice}', [AutogestionTallerController::class, 'eliminarPromocion'])
+        ->name('taller.computadoras.autogestion.promociones.destroy');
 });

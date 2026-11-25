@@ -12,6 +12,7 @@ class PublicaTallerController extends Controller
 {
     public function show(Request $request, ?string $slug = null)
     {
+        require_once __DIR__ . '/AutogestionTallerController.php';
         View::addNamespace('taller_computadoras', base_path('giros/reparacion_computadoras/views'));
 
         $empresasQuery = DB::connection('mysql')
@@ -32,18 +33,12 @@ class PublicaTallerController extends Controller
                 ->first()
             : null;
 
+        $config = $empresa
+            ? AutogestionTallerController::cargarConfiguracionPublica((int) $empresa->id)
+            : AutogestionTallerController::cargarConfiguracionPublica(0);
+
         $connGiro = DB::connection('giro_reparacion_computadoras');
         $schemaGiro = Schema::connection('giro_reparacion_computadoras');
-
-        $promociones = collect();
-        if ($empresa && $schemaGiro->hasTable('promociones')) {
-            $promociones = $connGiro->table('promociones')
-                ->where('empresa_id', $empresa->id)
-                ->where('activa', true)
-                ->orderByDesc('id')
-                ->limit(6)
-                ->get();
-        }
 
         $folioBuscado = trim((string) $request->query('folio', ''));
         $ordenConsultada = null;
@@ -57,7 +52,7 @@ class PublicaTallerController extends Controller
         return view('taller_computadoras::publica', [
             'empresa' => $empresa,
             'template' => $template,
-            'promociones' => $promociones,
+            'config' => $config,
             'folioBuscado' => $folioBuscado,
             'ordenConsultada' => $ordenConsultada,
         ]);
