@@ -15,11 +15,14 @@ return Application::configure(basePath: dirname(__DIR__))
                 }
             },
         )
-    ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->alias([
-            'operador.plataforma' => \App\Http\Middleware\AsegurarOperadorPlataforma::class,
+        ->withMiddleware(function (Middleware $middleware) {
+        $middleware->web(append: [
+            \App\Http\Middleware\ConfigurarConexionGiroSesion::class,
         ]);
-        //
+        $middleware->prependToPriorityList(
+            \Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests::class,
+            \App\Http\Middleware\ConfigurarConexionGiroSesion::class
+        );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

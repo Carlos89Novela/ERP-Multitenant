@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\DB;
 
 class UsuarioGiro extends Authenticatable
 {
@@ -35,6 +37,21 @@ class UsuarioGiro extends Authenticatable
         ];
     }
 
+    public function getConnectionName()
+    {
+        if (function_exists('session') && session()->isStarted() && session()->has('giro_conexion_activa')) {
+            $connActiva = (string) session('giro_conexion_activa');
+            if ($connActiva !== '' && config()->has("database.connections.{$connActiva}")) {
+                if (config('database.connections.usuario_giro_runtime.database') !== config("database.connections.{$connActiva}.database")) {
+                    Config::set('database.connections.usuario_giro_runtime', config("database.connections.{$connActiva}"));
+                    DB::purge('usuario_giro_runtime');
+                }
+            }
+        }
+
+        return 'usuario_giro_runtime';
+    }
+
     public static function conexionPorGiro(string $giro): string
     {
         return match ($giro) {
@@ -45,17 +62,5 @@ class UsuarioGiro extends Authenticatable
             'reparacion_celulares' => 'giro_reparacion_celulares',
             default => 'mysql',
         };
-    }
-
-    public function __wakeup(): void
-    {
-        if (function_exists('session') && session()->has('giro_conexion_activa')) {
-            $connActiva = (string) session('giro_conexion_activa');
-            if ($connActiva !== '' && config()->has("database.connections.{$connActiva}")) {
-                \Illuminate\Support\Facades\Config::set('database.connections.usuario_giro_runtime', config("database.connections.{$connActiva}"));
-                \Illuminate\Support\Facades\DB::purge('usuario_giro_runtime');
-            }
-        }
-        $this->setConnection('usuario_giro_runtime');
     }
 }
