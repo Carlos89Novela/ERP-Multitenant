@@ -10,10 +10,10 @@ use App\Models\MonitoreoServicioEmpresa;
 use App\Models\Sucursal;
 use App\Models\TemplateConfiguracion;
 use App\Models\User;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -29,15 +29,62 @@ class PlataformaController extends Controller
             ?? new TemplateConfiguracion(TemplateConfiguracion::defaultsPlataforma());
     }
 
-    public function index(): View
+    private function resumenGlobal(): array
     {
-        $template = $this->obtenerTemplatePlataforma();
+        $empresas = Empresa::query()->get(['id', 'activa', 'saldo_timbres', 'umbral_alerta_timbres']);
+        $timbresBolsa = (int) BolsaTimbresLote::query()->sum('cantidad_disponible');
 
-        // Solo metadatos de servicio y timbres; cero acceso a tablas operativas de clientes
+        return [
+            'empresas_total' => $empresas->count(),
+            'empresas_activas' => $empresas->where('activa', true)->count(),
+            'timbres_bolsa_disponibles' => $timbresBolsa,
+            'timbres_asignados_empresas' => (int) $empresas->sum('saldo_timbres'),
+            'alertas_timbres' => $empresas->filter(fn (Empresa $e) => $e->saldo_timbres <= $e->umbral_alerta_timbres)->count(),
+        ];
+    }
+
+    public function index(): RedirectResponse
+    {
+        return redirect()->route('plataforma.monitoreo');
+    }
+
+    public function monitoreo(): View
+    {
         $empresas = Empresa::query()
             ->with(['monitoreo', 'sucursales:id,empresa_id,codigo,nombre,activa'])
             ->orderByDesc('id')
             ->get();
+
+        return view('plataforma.monitoreo', [
+            'template' => $this->obtenerTemplatePlataforma(),
+            'resumen' => $this->resumenGlobal(),
+            'empresas' => $empresas,
+            'girosDisponibles' => Empresa::GIROS_DISPONIBLES,
+            'paginasCatalogo' => Empresa::PAGINAS_CATALOGO,
+        ]);
+    }
+
+    public function empresas(): View
+    {
+        $empresas = Empresa::query()
+            ->with(['sucursales:id,empresa_id,codigo,nombre,activa'])
+            ->orderByDesc('id')
+            ->get();
+
+        return view('plataforma.empresas', [
+            'template' => $this->obtenerTemplatePlataforma(),
+            'resumen' => $this->resumenGlobal(),
+            'empresas' => $empresas,
+            'girosDisponibles' => Empresa::GIROS_DISPONIBLES,
+            'paginasCatalogo' => Empresa::PAGINAS_CATALOGO,
+        ]);
+    }
+
+    public function timbres(): View
+    {
+        $empresas = Empresa::query()
+            ->orderBy('nombre')
+            ->get(['id', 'nombre', 'giro_comercial', 'saldo_timbres', 'umbral_alerta_timbres']);
 
         $lotesTimbres = BolsaTimbresLote::query()
             ->orderByDesc('id')
@@ -46,25 +93,24 @@ class PlataformaController extends Controller
         $asignacionesRecientes = AsignacionTimbres::query()
             ->with(['empresa:id,nombre,giro_comercial', 'lote:id,folio_compra'])
             ->orderByDesc('id')
-            ->limit(15)
+            ->limit(25)
             ->get();
 
-        $resumen = [
-            'empresas_total' => $empresas->count(),
-            'empresas_activas' => $empresas->where('activa', true)->count(),
-            'timbres_bolsa_disponibles' => (int) $lotesTimbres->sum('cantidad_disponible'),
-            'timbres_asignados_empresas' => (int) $empresas->sum('saldo_timbres'),
-            'alertas_timbres' => $empresas->filter(fn (Empresa $e) => $e->saldo_timbres <= $e->umbral_alerta_timbres)->count(),
-        ];
-
-        return view('plataforma.consola', [
-            'template' => $template,
+        return view('plataforma.timbres', [
+            'template' => $this->obtenerTemplatePlataforma(),
+            'resumen' => $this->resumenGlobal(),
             'empresas' => $empresas,
             'lotesTimbres' => $lotesTimbres,
             'asignacionesRecientes' => $asignacionesRecientes,
-            'resumen' => $resumen,
-            'girosDisponibles' => Empresa::GIROS_DISPONIBLES,
-            'paginasCatalogo' => Empresa::PAGINAS_CATALOGO,
+        ]);
+    }
+
+    public function apariencia(): View
+    {
+        return view('plataforma.apariencia', [
+            'template' => $this->obtenerTemplatePlataforma(),
+            'resumen' => $this->resumenGlobal(),
+            'operadoresCount' => User::query()->where('es_operador_plataforma', true)->count(),
         ]);
     }
 
@@ -111,7 +157,7 @@ class PlataformaController extends Controller
         }
 
         return redirect()
-            ->route('plataforma.consola')
+            ->route('plataforma.apariencia')
             ->with('status', 'Template de tu Consola de Plataforma actualizado en BD.');
     }
 
@@ -125,12 +171,12 @@ class PlataformaController extends Controller
             'giro_comercial' => ['required', "in:{$girosKeys}"],
             'sucursal_nombre' => ['required', 'string', 'max:150'],
             'umbral_alerta_timbres' => ['required', 'integer', 'min:1', 'max:100000'],
+            'paginas_habilitadas' => ['nullable', 'array'],
+            'paginas_habilitadas.*' => ['string', 'max:60'],
             'propietario_nombre' => ['nullable', 'string', 'max:120'],
             'propietario_email' => ['nullable', 'email', 'max:160', 'unique:users,email'],
             'propietario_password' => ['nullable', 'string', 'min:8', 'max:120'],
             'puede_autogestionar_template' => ['nullable', 'boolean'],
-            'paginas_habilitadas' => ['nullable', 'array'],
-            'paginas_habilitadas.*' => ['string', 'max:60'],
         ]);
 
         DB::transaction(function () use ($data): void {
@@ -176,6 +222,7 @@ class PlataformaController extends Controller
                 'ultimo_latido_at' => now(),
                 'ultimo_evento_servicio' => 'Alta de instancia en plataforma (sin timbres asignados)',
             ]);
+
             if (! empty($data['propietario_nombre']) && ! empty($data['propietario_email']) && ! empty($data['propietario_password'])) {
                 User::query()->create([
                     'name' => trim($data['propietario_nombre']),
@@ -191,7 +238,7 @@ class PlataformaController extends Controller
         });
 
         return redirect()
-            ->route('plataforma.consola')
+            ->route('plataforma.empresas')
             ->with('status', 'Empresa registrada con giro bloqueado y monitor de servicio inicializado.');
     }
 
@@ -231,9 +278,7 @@ class PlataformaController extends Controller
             ]
         );
 
-        return redirect()
-            ->route('plataforma.consola')
-            ->with('status', "Servicio y páginas actualizados para {$empresa->nombre}.");
+        return back()->with('status', "Servicio y páginas actualizados para {$empresa->nombre}.");
     }
 
     public function comprarLoteTimbres(Request $request): RedirectResponse
@@ -257,7 +302,7 @@ class PlataformaController extends Controller
         ]);
 
         return redirect()
-            ->route('plataforma.consola')
+            ->route('plataforma.timbres')
             ->with('status', 'Lote de timbres mayorista agregado a tu bolsa disponible.');
     }
 
@@ -309,7 +354,7 @@ class PlataformaController extends Controller
         });
 
         return redirect()
-            ->route('plataforma.consola')
+            ->route('plataforma.timbres')
             ->with('status', 'Timbres descontados de tu bolsa mayorista y asignados a la empresa.');
     }
 
@@ -339,7 +384,7 @@ class PlataformaController extends Controller
         );
 
         return redirect()
-            ->route('plataforma.consola')
+            ->route('plataforma.monitoreo')
             ->with('status', "Ping de servicio registrado para {$empresa->nombre}.");
     }
 
@@ -363,7 +408,7 @@ class PlataformaController extends Controller
         ]);
 
         return redirect()
-            ->route('plataforma.consola')
+            ->route('plataforma.apariencia')
             ->with('status', 'Cuenta de Operador de Plataforma creada correctamente.');
     }
 }

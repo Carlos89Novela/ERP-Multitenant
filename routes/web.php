@@ -6,11 +6,15 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-
 use App\Http\Controllers\Plataforma\PlataformaController;
 
 Route::prefix('plataforma')->name('plataforma.')->middleware('operador.plataforma')->group(function () {
     Route::get('/', [PlataformaController::class, 'index'])->name('consola');
+    Route::get('/monitoreo', [PlataformaController::class, 'monitoreo'])->name('monitoreo');
+    Route::get('/empresas', [PlataformaController::class, 'empresas'])->name('empresas');
+    Route::get('/timbres', [PlataformaController::class, 'timbres'])->name('timbres');
+    Route::get('/apariencia', [PlataformaController::class, 'apariencia'])->name('apariencia');
+
     Route::post('/template', [PlataformaController::class, 'guardarTemplatePlataforma'])->name('template.guardar');
     Route::post('/empresas', [PlataformaController::class, 'registrarEmpresa'])->name('empresas.store');
     Route::post('/empresas/{empresa}/servicio', [PlataformaController::class, 'actualizarEstadoEmpresa'])->name('empresas.servicio');

@@ -12,11 +12,11 @@ Plataforma ERP multitenant organizada por **giro comercial**, **aislamiento de d
 ## Principios y reglas de trabajo
 1. **Separación estricta por giro:** tablas, rutas, vistas y lógica separadas por giro para evitar cruces al modificar código.
 2. **Arranque limpio sin datos de prueba:** las migraciones dejan las tablas listas sin empresas ni registros semilla; las empresas de prueba se crean bajo demanda.
-3. **Consola del proveedor de la plataforma (\/plataforma\):**
-   - **Template propio administrable:** personalización en vivo desde BD de colores, tipografías, tamaños, bordes, fondos y presets visuales para las páginas del operador de plataforma.
-   - **Alta de empresas en renta:** asignación de \giro_comercial\ fijo/bloqueado, sucursal matriz, páginas habilitadas y cuenta inicial de **Propietario**.
-   - **Bolsa mayorista y asignación de timbres:** registro de lotes comprados al por mayor (\olsa_timbres_lotes\) y asignación con descuento automático hacia cada empresa (\signaciones_timbres\ + \empresas.saldo_timbres\).
-   - **Monitoreo de servicios (\monitoreo_servicios_empresa\):** supervisión de disponibilidad de páginas, latencia y saldo/estado de timbres **sin acceso a los datos operativos privados del cliente**.
+3. **Consola del proveedor de la plataforma (páginas separadas):**
+   - \/plataforma/monitoreo\: supervisión de disponibilidad de páginas, latencia y saldo/estado de timbres **sin acceso a los datos operativos privados del cliente**.
+   - \/plataforma/empresas\: alta de empresas en renta con \giro_comercial\ fijo/bloqueado, sucursal matriz, páginas habilitadas y cuenta inicial de **Propietario**.
+   - \/plataforma/timbres\: registro de lotes comprados al por mayor (\olsa_timbres_lotes\) y asignación con descuento automático hacia cada empresa (\signaciones_timbres\ + \empresas.saldo_timbres\).
+   - \/plataforma/apariencia\: personalización en vivo desde BD de colores, tipografías, tamaños, bordes, fondos y presets visuales + registro de operador de plataforma.
 4. **Documentación continua:** todo cambio relevante queda asentado en \README.md\.
 
 ## Flujo de ramas Git
@@ -28,7 +28,8 @@ Plataforma ERP multitenant organizada por **giro comercial**, **aislamiento de d
 - **Etapa 1:** repositorio limpio en \Carlos89Novela/ERP-Multitenant\ con ramas \main\, \develop\ y \	est\, \.gitignore\ seguro y estructura de 5 giros.
 - **Etapa 2:** base Laravel limpia y \README.md\ inicial en \develop\.
 - **Etapa 3:** migraciones base en blanco para multitenant, autogestión de páginas/templates, compra/asignación mayorista de timbres, monitoreo de servicios (sin acceso a datos de negocio del cliente) y tablas base para los 5 giros.
-- **Etapa 4:** modelos Eloquent base y Consola de Plataforma (\/plataforma\) con selector/editor de template propio en BD, alta de empresas en renta, compra mayorista/asignación de timbres y monitor técnico de servicio.
+- **Etapa 4:** modelos Eloquent base y Consola de Plataforma con selector/editor de template propio en BD, alta de empresas en renta, compra mayorista/asignación de timbres y monitor técnico de servicio.
 - **Etapa 5:** ejecución inicial de migraciones limpias en base de datos vacía, generación de \APP_KEY\ y validación de \/plataforma\.
 - **Etapa 6:** guardia \operador.plataforma\, registro de cuenta de operador y creación de usuario Propietario al dar de alta una empresa.
-- **Siguiente etapa:** módulos y vistas iniciales por giro comercial (\eparacion_computadoras\, \estaurante_cafeteria\, \barrotes\, \erreteria\, \eparacion_celulares\) y paso a la rama \	est\ para pruebas.
+- **Etapa 7:** separación de la consola en 4 páginas dedicadas (\/plataforma/monitoreo\, \/plataforma/empresas\, \/plataforma/timbres\ y \/plataforma/apariencia\) compartiendo el template administrable en BD.
+- **Siguiente etapa:** login/autenticación de plataforma y empresas + construcción de módulos separados por giro comercial.
