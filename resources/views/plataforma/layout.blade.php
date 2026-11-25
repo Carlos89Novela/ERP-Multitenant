@@ -101,6 +101,14 @@
                    class="px-3.5 py-2 text-xs font-medium {{ request()->routeIs('plataforma.apariencia') ? 'tpl-btn-primary' : 'tpl-surface hover:opacity-90' }}">
                     Template y Operador
                 </a>
+                @auth
+                    <form method="POST" action="{{ route('logout') }}" class="inline">
+                        @csrf
+                        <button type="submit" class="px-3.5 py-2 text-xs font-medium rounded bg-rose-600/80 text-white hover:opacity-90">
+                            Cerrar sesión
+                        </button>
+                    </form>
+                @endauth
             </nav>
         </header>
 
