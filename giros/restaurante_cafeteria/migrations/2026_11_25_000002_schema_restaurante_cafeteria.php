@@ -10,13 +10,28 @@ return new class extends Migration
     {
         $schema = Schema::connection('giro_restaurante_cafeteria');
 
+        if (! $schema->hasTable('usuarios_empresa')) {
+            $schema->create('usuarios_empresa', function (Blueprint $table) {
+                $table->id();
+                $table->unsignedBigInteger('empresa_id')->index();
+                $table->string('name', 150);
+                $table->string('email', 160);
+                $table->string('password');
+                $table->string('rol_empresa', 40)->default('propietario')->index();
+                $table->boolean('activo')->default(true);
+                $table->rememberToken();
+                $table->timestamps();
+                $table->unique(['empresa_id', 'email']);
+            });
+        }
+
         if (! $schema->hasTable('mesas_restaurante')) {
             $schema->create('mesas_restaurante', function (Blueprint $table) {
                 $table->id();
                 $table->unsignedBigInteger('empresa_id')->index();
                 $table->string('nombre_numero', 60);
                 $table->unsignedSmallInteger('capacidad')->default(4);
-                $table->string('estado', 25)->default('disponible'); // disponible | ocupada | reservada
+                $table->string('estado', 25)->default('disponible');
                 $table->boolean('activa')->default(true);
                 $table->timestamps();
             });
@@ -31,6 +46,7 @@ return new class extends Migration
                 $table->text('ingredientes_instrucciones')->nullable();
                 $table->decimal('costo_insumos', 12, 2)->default(0);
                 $table->decimal('precio_venta', 12, 2)->default(0);
+                $table->string('imagen_path', 255)->nullable();
                 $table->boolean('activa')->default(true);
                 $table->timestamps();
             });
@@ -42,7 +58,7 @@ return new class extends Migration
                 $table->unsignedBigInteger('empresa_id')->index();
                 $table->unsignedBigInteger('mesa_id')->nullable()->index();
                 $table->string('folio', 50);
-                $table->string('estado', 30)->default('abierta'); // abierta | preparacion | lista | cerrada | cancelada
+                $table->string('estado', 30)->default('abierta');
                 $table->decimal('total', 12, 2)->default(0);
                 $table->text('notas')->nullable();
                 $table->timestamps();
@@ -73,5 +89,6 @@ return new class extends Migration
         $schema->dropIfExists('comandas_restaurante');
         $schema->dropIfExists('recetas_platillos');
         $schema->dropIfExists('mesas_restaurante');
+        $schema->dropIfExists('usuarios_empresa');
     }
 };

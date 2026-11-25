@@ -10,6 +10,21 @@ return new class extends Migration
     {
         $schema = Schema::connection('giro_reparacion_celulares');
 
+        if (! $schema->hasTable('usuarios_empresa')) {
+            $schema->create('usuarios_empresa', function (Blueprint $table) {
+                $table->id();
+                $table->unsignedBigInteger('empresa_id')->index();
+                $table->string('name', 150);
+                $table->string('email', 160);
+                $table->string('password');
+                $table->string('rol_empresa', 40)->default('propietario')->index();
+                $table->boolean('activo')->default(true);
+                $table->rememberToken();
+                $table->timestamps();
+                $table->unique(['empresa_id', 'email']);
+            });
+        }
+
         if (! $schema->hasTable('equipos_celulares')) {
             $schema->create('equipos_celulares', function (Blueprint $table) {
                 $table->id();
@@ -59,5 +74,6 @@ return new class extends Migration
         $schema->dropIfExists('promociones_combos_celulares');
         $schema->dropIfExists('ordenes_reparacion_celulares');
         $schema->dropIfExists('equipos_celulares');
+        $schema->dropIfExists('usuarios_empresa');
     }
 };
