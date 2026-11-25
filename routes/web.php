@@ -49,6 +49,7 @@ use App\Http\Controllers\Empresa\AutogestionPublicaController;
 
 Route::get('/tienda/{slug}', [AutogestionPublicaController::class, 'verPublica'])->name('empresa.publica');
 Route::get('/tienda/{slug}/login', [\App\Http\Controllers\Auth\AuthController::class, 'showLogin'])->name('empresa.login');
+Route::post('/tienda/{slug}/login', [\App\Http\Controllers\Auth\AuthController::class, 'login'])->name('empresa.login.submit');
 
 Route::middleware('auth')->prefix('empresa/autogestion')->name('empresa.autogestion.')->group(function () {
     Route::post('/apariencia', [AutogestionPublicaController::class, 'guardarApariencia'])->name('apariencia');

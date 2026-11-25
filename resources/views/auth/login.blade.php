@@ -77,7 +77,7 @@
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('login.submit') }}" class="space-y-4">
+            <form method="POST" action="{{ $empresa ? route('empresa.login.submit', ['slug' => $empresa->slug]) : route('login.submit') }}" class="space-y-4">
                 @csrf
                 @if($empresa)
                     <input type="hidden" name="empresa_slug" value="{{ $empresa->slug }}">
