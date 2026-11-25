@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Empresa\AutogestionTallerController;
 use Giros\ReparacionComputadoras\Controllers\TallerComputadorasController;
 use Illuminate\Support\Facades\Route;
 
@@ -19,5 +20,10 @@ Route::middleware('auth')
         Route::get('/promociones', [TallerComputadorasController::class, 'promociones'])->name('promociones');
         Route::post('/promociones', [TallerComputadorasController::class, 'storePromocion'])->name('promociones.store');
         Route::post('/promociones/{promocionId}/toggle', [TallerComputadorasController::class, 'togglePromocion'])->name('promociones.toggle');
-        Route::get('/autogestion', [TallerComputadorasController::class, 'autogestion'])->name('autogestion');
+
+        Route::get('/autogestion', [AutogestionTallerController::class, 'vistaComputadoras'])->name('autogestion');
+        Route::post('/autogestion/apariencia', fn (\Illuminate\Http\Request $r) => app(AutogestionTallerController::class)->guardarAparienciaTaller($r, 'reparacion_computadoras'))->name('autogestion.apariencia');
+        Route::post('/autogestion/elementos', fn (\Illuminate\Http\Request $r) => app(AutogestionTallerController::class)->storeElementoTaller($r, 'reparacion_computadoras'))->name('autogestion.elementos.store');
+        Route::post('/autogestion/elementos/{elementoId}/toggle', fn (\Illuminate\Http\Request $r, int $elementoId) => app(AutogestionTallerController::class)->toggleElementoTaller($r, 'reparacion_computadoras', $elementoId))->name('autogestion.elementos.toggle');
+        Route::delete('/autogestion/elementos/{elementoId}', fn (\Illuminate\Http\Request $r, int $elementoId) => app(AutogestionTallerController::class)->destroyElementoTaller($r, 'reparacion_computadoras', $elementoId))->name('autogestion.elementos.destroy');
     });

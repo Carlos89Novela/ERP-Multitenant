@@ -38,6 +38,7 @@
                 <p class="text-xs tpl-muted mt-1">Sin datos de prueba iniciales.</p>
             </div>
             <div class="flex gap-2">
+                <a href="{{ route('giro.celulares.autogestion') }}" class="px-3.5 py-2 text-xs font-medium tpl-btn">Autogestión Visual</a>
                 <a href="{{ route('empresa.portal') }}" class="px-3.5 py-2 text-xs font-medium tpl-surface">Volver al portal</a>
                 <form method="POST" action="{{ route('logout') }}">@csrf<button type="submit" class="px-3.5 py-2 text-xs font-medium tpl-surface">Cerrar sesión</button></form>
             </div>
