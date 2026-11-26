@@ -21,10 +21,28 @@
         body { font-family: var(--taller-font); background-color: var(--taller-bg); color: var(--taller-text); }
         .taller-card { background-color: var(--taller-card); border: 1px solid var(--taller-border); border-radius: var(--taller-radius); }
         .taller-surface { background-color: var(--taller-surface); border: 1px solid var(--taller-border); border-radius: var(--taller-radius); }
+            html, body { color-scheme: dark; }
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
+        ::-webkit-scrollbar-track { background: var(--taller-bg); }
+        ::-webkit-scrollbar-thumb {
+            background: var(--taller-border);
+            border-radius: 9999px;
+            border: 2px solid var(--taller-bg);
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--taller-primary);
+        }
+        * { scrollbar-width: thin; scrollbar-color: var(--taller-border) var(--taller-bg); }
+            html {
+            scroll-behavior: smooth;
+        }
+        main, section, .taller-card, .taller-input {
+            scroll-behavior: smooth;
+        }
     </style>
 </head>
-<body class="min-h-screen flex antialiased">
-    <aside class="w-64 shrink-0 border-r p-5 flex flex-col justify-between" style="border-color: var(--taller-border); background-color: var(--taller-card);">
+<body class="min-h-screen md:h-screen md:overflow-hidden flex flex-col md:flex-row antialiased">
+    <aside class="w-full md:w-64 md:h-screen md:sticky md:top-0 shrink-0 border-b md:border-b-0 md:border-r p-5 flex flex-col justify-between overflow-y-auto" style="border-color: var(--taller-border); background-color: var(--taller-card);">
         <div class="space-y-6">
             <div class="flex items-center gap-3">
                 <div class="h-10 w-10 flex items-center justify-center rounded-lg text-lg font-bold" style="background-color: var(--taller-primary); color: #fff;">
@@ -66,7 +84,7 @@
         </div>
     </aside>
 
-    <main class="flex-1 p-6 md:p-8 space-y-6">
+    <main class="flex-1 md:h-screen md:overflow-y-auto p-6 md:p-8 space-y-6">
         <header class="flex flex-wrap items-center justify-between gap-4">
             <div>
                 <h1 class="text-2xl font-bold">{{ $configInternas['titulo_panel'] ?? 'Panel de Control — Reparación de Computadoras' }}</h1>
@@ -131,5 +149,108 @@
             </section>
         @endif
     </main>
+        <script>
+        (function () {
+            if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                return;
+            }
+            if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+                return;
+            }
+
+            function getScrollContainer() {
+                const main = document.querySelector('main');
+                if (main && window.innerWidth >= 768) {
+                    const style = window.getComputedStyle(main);
+                    const canScrollMain = (style.overflowY === 'auto' || style.overflowY === 'scroll')
+                        && main.scrollHeight > main.clientHeight + 2;
+                    if (canScrollMain) {
+                        return { el: main, isWindow: false };
+                    }
+                }
+                return { el: window, isWindow: true };
+            }
+
+            let current = 0;
+            let desired = 0;
+            let rafId = null;
+            let activeTarget = null;
+            const ease = 0.065;
+            const deltaFactor = 0.85;
+
+            function getScrollPos(ctx) {
+                return ctx.isWindow ? window.scrollY : ctx.el.scrollTop;
+            }
+
+            function setScrollPos(ctx, val) {
+                if (ctx.isWindow) {
+                    window.scrollTo(0, val);
+                } else {
+                    ctx.el.scrollTop = val;
+                }
+            }
+
+            function getMaxScroll(ctx) {
+                if (ctx.isWindow) {
+                    return Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+                }
+                return Math.max(0, ctx.el.scrollHeight - ctx.el.clientHeight);
+            }
+
+            function step() {
+                if (!activeTarget) {
+                    rafId = null;
+                    return;
+                }
+
+                const actual = getScrollPos(activeTarget);
+                if (Math.abs(actual - current) > 3) {
+                    current = actual;
+                    desired = actual;
+                }
+
+                const maxScroll = getMaxScroll(activeTarget);
+                desired = Math.max(0, Math.min(maxScroll, desired));
+                current += (desired - current) * ease;
+
+                if (Math.abs(desired - current) < 0.35) {
+                    current = desired;
+                    setScrollPos(activeTarget, Math.round(current));
+                    rafId = null;
+                    return;
+                }
+
+                setScrollPos(activeTarget, current);
+                rafId = window.requestAnimationFrame(step);
+            }
+
+            document.addEventListener('wheel', function (e) {
+                if (e.ctrlKey || e.metaKey || e.altKey) return;
+                if (e.target && e.target.closest('input[type="range"], textarea, select, [data-no-smooth-scroll]')) return;
+
+                const ctx = getScrollContainer();
+                const maxScroll = getMaxScroll(ctx);
+                if (maxScroll <= 2) return;
+
+                let deltaY = e.deltaY;
+                if (e.deltaMode === 1) deltaY *= 32;
+                else if (e.deltaMode === 2) deltaY *= window.innerHeight;
+
+                e.preventDefault();
+
+                if (!activeTarget || activeTarget.el !== ctx.el || rafId === null) {
+                    activeTarget = ctx;
+                    current = getScrollPos(ctx);
+                    desired = current;
+                }
+
+                desired = Math.max(0, Math.min(maxScroll, desired + (deltaY * deltaFactor)));
+
+                if (rafId === null) {
+                    rafId = window.requestAnimationFrame(step);
+                }
+            }, { passive: false });
+        })();
+    </script>
 </body>
 </html>

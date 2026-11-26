@@ -12,26 +12,119 @@
     "icono_predeterminado": "💻",
     "color_fondo": "#09090b",
     "color_tarjeta": "#111115",
+    "fondo_imagen": "\/uploads\/giros\/reparacion_computadoras\/empresa_1\/fondo_1795708939_szBmKO.jpg",
+    "fondo_degradado": "ninguno",
+    "fondo_estatico": true,
+    "transparencia_flotantes": 40,
+    "carrusel_intervalo_ms": 4500,
     "imagenes": [
         {
-            "id": "fe2d0013-5c80-4001-9967-7e0d8379a6db",
-            "url": "\/uploads\/giros\/reparacion_computadoras\/empresa_1\/slide_1795645808_ZeULgH.jpeg",
-            "titulo": "",
+            "id": "835a7102-94b8-4a96-8982-9fa21015d962",
+            "url": "\/uploads\/giros\/reparacion_computadoras\/empresa_1\/slide_1795707581_uoSz1I.jpg",
+            "titulo": "Diagnostico y primer servicio con 20",
+            "subtitulo": ""
+        },
+        {
+            "id": "e9d9cbe9-7bcc-43de-b6be-6dc28981d432",
+            "url": "\/uploads\/giros\/reparacion_computadoras\/empresa_1\/slide_1795707610_qjqCcf.jpg",
+            "titulo": "Actualización a SSD y Limpieza",
+            "subtitulo": ""
+        },
+        {
+            "id": "8b823370-aa19-48c8-962a-50bbf1845589",
+            "url": "\/uploads\/giros\/reparacion_computadoras\/empresa_1\/slide_1795707635_WsHAq7.jpg",
+            "titulo": "Formateo e Intalación",
             "subtitulo": ""
         }
     ],
     "servicios": [
         {
             "titulo": "Diagnóstico y hardware",
-            "descripcion": "Revisión de fuente, tarjeta madre, pantallas, teclados, baterías y ventilación."
+            "descripcion": "Revisión de fuente, tarjeta madre, pantallas, teclados, baterías y ventilación.",
+            "nombre": "Diagnóstico y hardware",
+            "categoria": "Cambio de partes"
         },
         {
             "titulo": "Almacenamiento y velocidad",
-            "descripcion": "Migración a SSD\/NVMe, ampliación de memoria RAM y limpieza térmica preventiva."
+            "descripcion": "Migración a SSD\/NVMe, ampliación de memoria RAM y limpieza térmica preventiva.",
+            "nombre": "Almacenamiento y velocidad",
+            "categoria": "Cambio de partes"
         },
         {
             "titulo": "Sistema y respaldo",
-            "descripcion": "Instalación limpia de sistema operativo, controladores, antivirus y respaldo de datos."
+            "descripcion": "Instalación limpia de sistema operativo, controladores, antivirus y respaldo de datos.",
+            "nombre": "Sistema y respaldo",
+            "categoria": "Limpieza, formateo y sistema"
+        },
+        {
+            "nombre": "Diagnóstico integral y presupuesto",
+            "descripcion": "Revisión completa de hardware, discos, memoria y sistema con reporte técnico y cotización.",
+            "precio": "350.00",
+            "titulo": "Diagnóstico integral y presupuesto",
+            "categoria": "Limpieza, formateo y sistema"
+        },
+        {
+            "nombre": "Mantenimiento preventivo y limpieza interna",
+            "descripcion": "Limpieza profunda de polvo, revisión de ventiladores y aplicación de pasta térmica.",
+            "precio": "650.00",
+            "titulo": "Mantenimiento preventivo y limpieza interna",
+            "categoria": "Cambio de partes"
+        },
+        {
+            "nombre": "Formateo, sistema operativo y drivers",
+            "descripcion": "Instalación limpia del sistema operativo, controladores actualizados y configuración base.",
+            "precio": "550.00",
+            "titulo": "Formateo, sistema operativo y drivers",
+            "categoria": "Limpieza, formateo y sistema"
+        },
+        {
+            "nombre": "Actualización a SSD \/ ampliación de RAM",
+            "descripcion": "Instalación de unidad SSD o módulos RAM y clonación\/migración de tu sistema actual.",
+            "precio": "700.00",
+            "titulo": "Actualización a SSD \/ ampliación de RAM",
+            "categoria": "Cambio \/ actualización de componentes y equipos"
+        },
+        {
+            "nombre": "Cambio de pantalla y bisagras (Laptop)",
+            "descripcion": "Reemplazo de pantalla dañada, líneas o manchas, verificando cable flex y bisagras.",
+            "precio": "1450.00",
+            "titulo": "Cambio de pantalla y bisagras (Laptop)",
+            "categoria": "Cambio de partes"
+        },
+        {
+            "nombre": "Reparación \/ reemplazo de teclado y touchpad",
+            "descripcion": "Sustitución de teclado con teclas sin respuesta o reparación de touchpad.",
+            "precio": "680.00",
+            "titulo": "Reparación \/ reemplazo de teclado y touchpad",
+            "categoria": "Cambio de partes"
+        },
+        {
+            "nombre": "Reemplazo de batería o centro de carga",
+            "descripcion": "Cambio de batería agotada o reparación de puerto de carga y regulación de energía.",
+            "precio": "780.00",
+            "titulo": "Reemplazo de batería o centro de carga",
+            "categoria": "Cambio de partes"
+        },
+        {
+            "nombre": "Respaldo y recuperación de información",
+            "descripcion": "Resguardo seguro de documentos, fotos y carpetas importantes antes o después de intervenir el equipo.",
+            "precio": "600.00",
+            "titulo": "Respaldo y recuperación de información",
+            "categoria": "Cambio \/ actualización de componentes y equipos"
+        },
+        {
+            "nombre": "Eliminación de virus, malware y adware",
+            "descripcion": "Limpieza de software malicioso, procesos pesados y ajustes de seguridad y arranque.",
+            "precio": "500.00",
+            "titulo": "Eliminación de virus, malware y adware",
+            "categoria": "Cambio de partes"
+        },
+        {
+            "nombre": "Ensamblaje y optimización de PC Gamer \/ Trabajo",
+            "descripcion": "Armado profesional de equipo de escritorio, administración de cables y pruebas de estabilidad.",
+            "precio": "950.00",
+            "titulo": "Ensamblaje y optimización de PC Gamer \/ Trabajo",
+            "categoria": "Cambio \/ actualización de componentes y equipos"
         }
     ],
     "promociones": []

@@ -1,0 +1,11 @@
+[
+    {
+        "id": "cli_vl392opynu",
+        "nombre": "Cliente 1",
+        "email": "cliente1@pruebas.local",
+        "telefono": "6621234567",
+        "password": "$2y$12$YVtFTsRPmk5XtlpopNOFQOymWwGBEQKvW9LwTwtzeZRWn5evPPTJC",
+        "equipos": [],
+        "creado_en": "2026-11-26 16:38"
+    }
+]

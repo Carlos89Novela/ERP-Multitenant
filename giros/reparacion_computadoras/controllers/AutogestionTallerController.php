@@ -22,6 +22,16 @@ class AutogestionTallerController extends Controller
         return "{$dir}/empresa_{$empresaId}_publica.json";
     }
 
+    public static function catalogoDegradados(): array
+    {
+        return [
+            'ninguno' => 'Sin degradado (limpio)',
+            'oscuro_suave' => 'Degradado oscuro suave (ideal sobre imagen)',
+            'diagonal_primario' => 'Diagonal con color primario y fondo',
+            'horizontal_acento' => 'Horizontal sutil con color acento',
+            'vertical_profundo' => 'Vertical profundo de arriba hacia abajo',
+        ];
+    }
     public static function catalogoFuentes(): array
     {
         return [
@@ -52,6 +62,11 @@ class AutogestionTallerController extends Controller
             'icono_predeterminado' => '💻',
             'color_fondo' => '#09090b',
             'color_tarjeta' => '#111115',
+            'fondo_imagen' => '',
+            'fondo_degradado' => 'oscuro_suave',
+            'fondo_estatico' => true,
+            'transparencia_flotantes' => 25,
+            'carrusel_intervalo_ms' => 4500,
             'imagenes' => [],
             'servicios' => [
                 [
@@ -146,6 +161,8 @@ class AutogestionTallerController extends Controller
 
         $ambito = (string) $request->query('ambito', $request->input('ambito', 'publica'));
         $ambito = in_array($ambito, ['publica', 'internas'], true) ? $ambito : 'publica';
+        $tabActivo = (string) $request->query('tab', 'general');
+        $tabActivo = in_array($tabActivo, ['general', 'carrusel', 'servicios', 'promociones'], true) ? $tabActivo : 'general';
 
         $configPublica = static::cargarConfiguracionPublica((int) $usuario->empresa_id);
         $configInternas = static::cargarConfiguracionPorAmbito((int) $usuario->empresa_id, 'internas');
@@ -156,10 +173,12 @@ class AutogestionTallerController extends Controller
             'empresa' => $empresa,
             'template' => $template,
             'ambito' => $ambito,
+            'tabActivo' => $tabActivo,
             'config' => $config,
             'configPublica' => $configPublica,
             'configInternas' => $configInternas,
             'fuentes' => static::catalogoFuentes(),
+            'degradados' => static::catalogoDegradados(),
         ]);
     }
 
@@ -183,6 +202,11 @@ class AutogestionTallerController extends Controller
             'horario' => ['nullable', 'string', 'max:120'],
             'icono_predeterminado' => ['nullable', 'string', 'max:16'],
             'fuente_familia' => ['nullable', 'string', 'max:160'],
+            'fondo_imagen_archivo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:6144'],
+            'fondo_degradado' => ['nullable', 'string', 'max:60'],
+            'fondo_estatico' => ['nullable', 'boolean'],
+            'quitar_fondo_imagen' => ['nullable', 'boolean'],
+            'transparencia_flotantes' => ['nullable', 'integer', 'min:0', 'max:85'],
             'color_primario' => ['required', 'string', 'max:30'],
             'color_acento' => ['required', 'string', 'max:30'],
             'color_fondo' => ['required', 'string', 'max:30'],
@@ -235,15 +259,71 @@ class AutogestionTallerController extends Controller
             $config['fuente_familia'] = $fuenteElegida;
             $config['color_fondo'] = $datos['color_fondo'];
             $config['color_tarjeta'] = $datos['color_tarjeta'];
+        if ($request->boolean('quitar_fondo_imagen')) {
+            $actualImg = ltrim((string) ($config['fondo_imagen'] ?? ''), '/');
+            if ($actualImg !== '' && str_starts_with($actualImg, 'uploads/giros/reparacion_computadoras/')) {
+                $full = public_path($actualImg);
+                if (file_exists($full)) {
+                    @unlink($full);
+                }
+            }
+            $config['fondo_imagen'] = '';
+        } elseif ($request->hasFile('fondo_imagen_archivo')) {
+            $actualImg = ltrim((string) ($config['fondo_imagen'] ?? ''), '/');
+            if ($actualImg !== '' && str_starts_with($actualImg, 'uploads/giros/reparacion_computadoras/')) {
+                $full = public_path($actualImg);
+                if (file_exists($full)) {
+                    @unlink($full);
+                }
+            }
+
+            $relDir = "uploads/giros/reparacion_computadoras/empresa_{$empresaId}";
+            $absDir = public_path($relDir);
+            if (! is_dir($absDir)) {
+                mkdir($absDir, 0777, true);
+            }
+
+            $archivo = $request->file('fondo_imagen_archivo');
+            $ext = strtolower($archivo->getClientOriginalExtension() ?: 'jpg');
+            $nombreFondo = 'fondo_' . time() . '_' . Str::random(6) . '.' . $ext;
+            $archivo->move($absDir, $nombreFondo);
+            $config['fondo_imagen'] = '/' . trim($relDir, '/') . '/' . $nombreFondo;
+        }
+
+        $degradadosValidos = array_keys(static::catalogoDegradados());
+        $degElegido = $datos['fondo_degradado'] ?? 'oscuro_suave';
+        $config['fondo_degradado'] = in_array($degElegido, $degradadosValidos, true) ? $degElegido : 'oscuro_suave';
+        $config['fondo_estatico'] = $request->boolean('fondo_estatico');
+        $config['transparencia_flotantes'] = max(0, min(85, (int) ($datos['transparencia_flotantes'] ?? 25)));
         }
 
         static::guardarConfiguracionPublica($empresaId, $config);
 
         return redirect()
-            ->route('taller.computadoras.autogestion', ['ambito' => $ambito])
+            ->route('taller.computadoras.autogestion', ['ambito' => $ambito, 'tab' => $request->input('tab', 'general')])
             ->with('status', $ambito === 'internas'
                 ? 'Configuración de las páginas internas guardada.'
                 : 'Configuración de la página pública guardada.');
+    }
+
+    public function actualizarCarruselConfig(Request $request): RedirectResponse
+    {
+        $datos = $request->validate([
+            'carrusel_segundos' => ['required', 'numeric', 'min:1.5', 'max:30'],
+        ]);
+
+        /** @var UsuarioTaller $usuario */
+        $usuario = $request->attributes->get('usuario_taller');
+        $empresaId = (int) $usuario->empresa_id;
+
+        $config = static::cargarConfiguracionPublica($empresaId);
+        $seg = max(1.5, min(30, (float) $datos['carrusel_segundos']));
+        $config['carrusel_intervalo_ms'] = (int) round($seg * 1000);
+        static::guardarConfiguracionPublica($empresaId, $config);
+
+        return redirect()
+            ->route('taller.computadoras.autogestion', ['ambito' => 'publica', 'tab' => 'carrusel'])
+            ->with('status', 'Velocidad del carrusel actualizada.');
     }
 
     public function agregarImagen(Request $request): RedirectResponse
@@ -279,7 +359,7 @@ class AutogestionTallerController extends Controller
         static::guardarConfiguracionPublica($empresaId, $config);
 
         return redirect()
-            ->route('taller.computadoras.autogestion')
+            ->route('taller.computadoras.autogestion', ['ambito' => 'publica', 'tab' => 'carrusel'])
             ->with('status', 'Imagen agregada al carrusel.');
     }
 
@@ -309,7 +389,7 @@ class AutogestionTallerController extends Controller
         static::guardarConfiguracionPublica($empresaId, $config);
 
         return redirect()
-            ->route('taller.computadoras.autogestion')
+            ->route('taller.computadoras.autogestion', ['ambito' => 'publica', 'tab' => 'carrusel'])
             ->with('status', 'Imagen eliminada del carrusel.');
     }
 
@@ -333,7 +413,7 @@ class AutogestionTallerController extends Controller
         static::guardarConfiguracionPublica($empresaId, $config);
 
         return redirect()
-            ->route('taller.computadoras.autogestion')
+            ->route('taller.computadoras.autogestion', ['ambito' => 'publica', 'tab' => 'servicios'])
             ->with('status', 'Servicio agregado.');
     }
 
@@ -351,7 +431,7 @@ class AutogestionTallerController extends Controller
         }
 
         return redirect()
-            ->route('taller.computadoras.autogestion')
+            ->route('taller.computadoras.autogestion', ['ambito' => 'publica', 'tab' => 'servicios'])
             ->with('status', 'Servicio eliminado.');
     }
 
@@ -377,7 +457,7 @@ class AutogestionTallerController extends Controller
         static::guardarConfiguracionPublica($empresaId, $config);
 
         return redirect()
-            ->route('taller.computadoras.autogestion')
+            ->route('taller.computadoras.autogestion', ['ambito' => 'publica', 'tab' => 'promociones'])
             ->with('status', 'Promoción agregada.');
     }
 
@@ -395,7 +475,7 @@ class AutogestionTallerController extends Controller
         }
 
         return redirect()
-            ->route('taller.computadoras.autogestion')
+            ->route('taller.computadoras.autogestion', ['ambito' => 'publica', 'tab' => 'promociones'])
             ->with('status', 'Promoción eliminada.');
     }
 }
