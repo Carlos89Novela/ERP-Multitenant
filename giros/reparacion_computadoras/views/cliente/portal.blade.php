@@ -130,37 +130,153 @@
                 <h2 class="text-lg font-bold">Registrar equipo y solicitar reparación</h2>
                 <p class="text-xs" style="color: var(--taller-muted);">Agrega tu equipo y genera una orden con folio para consultar su estado.</p>
             </div>
-            <form method="POST" action="{{ route('taller.computadoras.cliente.equipos.store') }}" class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {{-- 1. Registrar equipo --}}
+            <form method="POST" action="{{ route('taller.computadoras.cliente.equipos.store') }}" class="taller-card p-6 space-y-4">
+                @csrf
+                <input type="hidden" name="solo_registrar_equipo" value="1">
+                <div>
+                    <h2 class="text-lg font-bold">Registrar equipo</h2>
+                    <p class="text-xs" style="color: var(--taller-muted);">Guarda tu equipo en tu perfil para solicitar servicios fácilmente.</p>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs mb-1" style="color: var(--taller-muted);">Tipo de equipo</label>
+                        <select name="tipo_equipo" required class="w-full px-3.5 py-2 taller-input text-sm">
+                            <option value="Laptop" {{ old('tipo_equipo') === 'Laptop' ? 'selected' : '' }}>Laptop</option>
+                            <option value="PC Escritorio" {{ old('tipo_equipo') === 'PC Escritorio' ? 'selected' : '' }}>PC Escritorio</option>
+                            <option value="All-in-One" {{ old('tipo_equipo') === 'All-in-One' ? 'selected' : '' }}>All-in-One</option>
+                            <option value="MacBook / iMac" {{ old('tipo_equipo') === 'MacBook / iMac' ? 'selected' : '' }}>MacBook / iMac</option>
+                            <option value="Otro" {{ old('tipo_equipo') === 'Otro' ? 'selected' : '' }}>Otro</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs mb-1" style="color: var(--taller-muted);">Marca</label>
+                        <input type="text" name="marca" value="{{ old('marca') }}" placeholder="Ej. Dell, Lenovo, HP" required class="w-full px-3.5 py-2 taller-input text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs mb-1" style="color: var(--taller-muted);">Modelo</label>
+                        <input type="text" name="modelo" value="{{ old('modelo') }}" placeholder="Ej. Inspiron 15" required class="w-full px-3.5 py-2 taller-input text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs mb-1" style="color: var(--taller-muted);">Número de serie (opcional)</label>
+                        <input type="text" name="numero_serie" value="{{ old('numero_serie') }}" placeholder="Ej. SN-882910" class="w-full px-3.5 py-2 taller-input text-sm">
+                    </div>
+                </div>
+                <button type="submit" class="px-5 py-2.5 text-xs font-semibold taller-input hover:opacity-95" style="border-color: var(--taller-primary);">
+                    Registrar equipo
+                </button>
+            </form>
+
+            {{-- 2. Solicitar reparación con menú desplegable de servicios --}}
+                        @php
+                $serviciosDisponibles = $config['servicios'] ?? [];
+                $serviciosPorCatPortal = [];
+                foreach ($serviciosDisponibles as $srvItem) {
+                    if (! is_array($srvItem)) {
+                        continue;
+                    }
+                    $nombreSrv = trim((string) ($srvItem['titulo'] ?? $srvItem['nombre'] ?? 'Servicio'));
+                    if ($nombreSrv === '') {
+                        continue;
+                    }
+                    $descSrv = trim((string) ($srvItem['descripcion'] ?? ''));
+                    $catPortal = trim((string) ($srvItem['categoria'] ?? ''));
+                    if ($catPortal === '') {
+                        $textoSrv = mb_strtolower($nombreSrv . ' ' . $descSrv);
+                        if (preg_match('/pantalla|bisagra|teclado|touchpad|bater[ií]a|centro de carga|parte|pieza/u', $textoSrv)) {
+                            $catPortal = 'Cambio de partes';
+                        } elseif (preg_match('/venta|accesorio|cat[aá]logo|equipo nuevo|perif[eé]rico/u', $textoSrv)) {
+                            $catPortal = 'Venta de equipos y accesorios';
+                        } elseif (preg_match('/ssd|ram|componente|ensamblaje|gamer|almacenamiento|velocidad|actualizaci[oó]n/u', $textoSrv)) {
+                            $catPortal = 'Cambio / actualización de componentes';
+                        } elseif (preg_match('/limpieza|formateo|sistema|driver|respaldo|recuperaci[oó]n|virus|malware/u', $textoSrv)) {
+                            $catPortal = 'Limpieza, formateo y sistema';
+                        } else {
+                            $catPortal = 'Diagnóstico y soporte general';
+                        }
+                    }
+                    $serviciosPorCatPortal[$catPortal][] = $srvItem;
+                }
+            @endphp
+            <form method="POST" action="{{ route('taller.computadoras.cliente.equipos.store') }}" class="taller-card p-6 space-y-4">
                 @csrf
                 <div>
-                    <label class="block text-xs mb-1" style="color: var(--taller-muted);">Tipo de equipo</label>
-                    <select name="tipo_equipo" class="w-full px-3 py-2 taller-input text-xs">
-                        <option value="Laptop">Laptop</option>
-                        <option value="PC de escritorio">PC de escritorio</option>
-                        <option value="All-in-One">All-in-One</option>
-                        <option value="Impresora / Periférico">Impresora / Periférico</option>
+                    <h2 class="text-lg font-bold">Solicitar reparación</h2>
+                    <p class="text-xs" style="color: var(--taller-muted);">Elige el servicio que requieres y genera una orden con folio.</p>
+                </div>
+
+                <div>
+                    <label class="block text-xs mb-1" style="color: var(--taller-muted);">Servicio requerido</label>
+                    <select name="servicio_seleccionado" id="servicioSeleccionadoPortal" class="w-full px-3.5 py-2 taller-input text-sm">
+                        <option value="">-- Selecciona un servicio del catálogo --</option>
+                        @foreach($serviciosPorCatPortal as $nombreCatPortal => $itemsCatPortal)
+                            <optgroup label="{{ $nombreCatPortal }}">
+                                @foreach($itemsCatPortal as $srv)
+                                    @php
+                                        $nombreSrv = $srv['titulo'] ?? $srv['nombre'] ?? 'Servicio';
+                                        $precioSrv = $srv['precio'] ?? '';
+                                    @endphp
+                                    <option value="{{ $nombreSrv }}" {{ old('servicio_seleccionado') === $nombreSrv ? 'selected' : '' }}>
+                                        {{ $nombreSrv }}{{ $precioSrv !== '' ? ' — $' . $precioSrv : '' }}
+                                    </option>
+                                @endforeach
+                            </optgroup>
+                        @endforeach
+                        <optgroup label="Otro">
+                            <option value="Otro servicio / Diagnóstico" {{ old('servicio_seleccionado') === 'Otro servicio / Diagnóstico' ? 'selected' : '' }}>Otro servicio / Diagnóstico</option>
+                        </optgroup>
                     </select>
                 </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs mb-1" style="color: var(--taller-muted);">Tipo de equipo</label>
+                        <select name="tipo_equipo" required class="w-full px-3.5 py-2 taller-input text-sm">
+                            <option value="Laptop">Laptop</option>
+                            <option value="PC Escritorio">PC Escritorio</option>
+                            <option value="All-in-One">All-in-One</option>
+                            <option value="MacBook / iMac">MacBook / iMac</option>
+                            <option value="Otro">Otro</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs mb-1" style="color: var(--taller-muted);">Marca</label>
+                        <input type="text" name="marca" value="{{ old('marca') }}" placeholder="Ej. HP, Asus" required class="w-full px-3.5 py-2 taller-input text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs mb-1" style="color: var(--taller-muted);">Modelo</label>
+                        <input type="text" name="modelo" value="{{ old('modelo') }}" placeholder="Ej. Pavilion 14" required class="w-full px-3.5 py-2 taller-input text-sm">
+                    </div>
+                </div>
+
                 <div>
-                    <label class="block text-xs mb-1" style="color: var(--taller-muted);">Marca</label>
-                    <input type="text" name="marca" value="{{ old('marca') }}" required placeholder="Ej. Dell, Lenovo, HP" class="w-full px-3 py-2 taller-input text-xs">
+                    <label class="block text-xs mb-1" style="color: var(--taller-muted);">Detalles o falla observada</label>
+                    <input type="text" name="falla_reportada" id="fallaReportadaPortal" value="{{ old('falla_reportada') }}" placeholder="Ej. No enciende, va lento, detalles adicionales" required class="w-full px-3.5 py-2 taller-input text-sm">
                 </div>
-                <div>
-                    <label class="block text-xs mb-1" style="color: var(--taller-muted);">Modelo</label>
-                    <input type="text" name="modelo" value="{{ old('modelo') }}" required placeholder="Ej. Inspiron 15" class="w-full px-3 py-2 taller-input text-xs">
-                </div>
-                <div>
-                    <label class="block text-xs mb-1" style="color: var(--taller-muted);">Número de serie (opcional)</label>
-                    <input type="text" name="serie" value="{{ old('serie') }}" placeholder="Ej. SN-882910" class="w-full px-3 py-2 taller-input text-xs">
-                </div>
-                <div class="md:col-span-3">
-                    <label class="block text-xs mb-1" style="color: var(--taller-muted);">Falla o servicio requerido</label>
-                    <input type="text" name="falla" value="{{ old('falla') }}" required placeholder="Ej. No enciende, cambio de pantalla, formateo" class="w-full px-3 py-2 taller-input text-xs">
-                </div>
-                <div>
-                    <button type="submit" class="w-full px-4 py-2 text-xs font-semibold taller-btn hover:opacity-95">Registrar y generar orden</button>
-                </div>
+
+                <button type="submit" class="px-5 py-2.5 text-xs font-semibold taller-btn hover:opacity-95">
+                    Solicitar reparación y generar orden
+                </button>
             </form>
+        </div>
+
+        <script>
+            (function () {
+                const selSrv = document.getElementById('servicioSeleccionadoPortal');
+                const inpFalla = document.getElementById('fallaReportadaPortal');
+                if (!selSrv || !inpFalla) return;
+                selSrv.addEventListener('change', function () {
+                    const elegido = selSrv.value.trim();
+                    if (!elegido) return;
+                    if (inpFalla.value.trim() === '') {
+                        inpFalla.value = elegido;
+                    } else if (!inpFalla.value.toLowerCase().includes(elegido.toLowerCase())) {
+                        inpFalla.value = elegido + ' - ' + inpFalla.value.trim();
+                    }
+                });
+            })();
+        </script>
         </section>
 
         <section class="space-y-4">
