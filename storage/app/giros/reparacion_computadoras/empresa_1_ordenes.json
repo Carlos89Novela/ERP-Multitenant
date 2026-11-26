@@ -30,5 +30,28 @@
                 "fecha": "2026-11-26 16:38"
             }
         ]
+    },
+    {
+        "id": "ord_qlwahlovnn",
+        "folio": "ORD-2026-FDGHJ",
+        "cliente_id": "cli_vl392opynu",
+        "cliente_nombre": "Cliente 1",
+        "equipo_id": "eq_qxof9mpj",
+        "equipo": "Laptop DELL DELL Pro 14",
+        "tipo_equipo": "Laptop",
+        "serie": "",
+        "servicio": "Diagnóstico y hardware",
+        "falla": "Diagnóstico y hardware — La Laptop se encuentra muy lenta me gustaria un diagnostico",
+        "estado": "Recepción",
+        "diagnostico": "Pendiente de revisión técnica en taller.",
+        "costo_estimado": null,
+        "actualizado_en": "2026-11-26 17:40",
+        "historial": [
+            {
+                "estado": "Recepción",
+                "nota": "Orden generada por el cliente. Detalle: Diagnóstico y hardware — La Laptop se encuentra muy lenta me gustaria un diagnostico",
+                "fecha": "2026-11-26 17:40"
+            }
+        ]
     }
 ]

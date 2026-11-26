@@ -268,13 +268,33 @@ class ClienteTallerController extends Controller
 
     public function registrarEquipoYOrden(Request $request): RedirectResponse
     {
+        $soloEquipo = $request->boolean('solo_registrar_equipo');
+
         $datos = $request->validate([
-            'tipo_equipo' => ['required', 'string', 'max:50'],
+            'tipo_equipo' => ['required', 'string', 'max:70'],
             'marca' => ['required', 'string', 'max:70'],
             'modelo' => ['required', 'string', 'max:90'],
             'serie' => ['nullable', 'string', 'max:80'],
-            'falla' => ['required', 'string', 'max:500'],
+            'numero_serie' => ['nullable', 'string', 'max:80'],
+            'servicio_seleccionado' => ['nullable', 'string', 'max:150'],
+            'falla_reportada' => ['nullable', 'string', 'max:500'],
+            'falla' => ['nullable', 'string', 'max:500'],
         ]);
+
+        $servicioElegido = trim((string) ($datos['servicio_seleccionado'] ?? ''));
+        $fallaTexto = trim((string) ($datos['falla_reportada'] ?? $datos['falla'] ?? ''));
+
+        if ($servicioElegido !== '' && $fallaTexto !== '' && ! str_contains(mb_strtolower($fallaTexto), mb_strtolower($servicioElegido))) {
+            $fallaTexto = $servicioElegido . ' — ' . $fallaTexto;
+        } elseif ($servicioElegido !== '' && $fallaTexto === '') {
+            $fallaTexto = $servicioElegido;
+        }
+
+        if (! $soloEquipo && $fallaTexto === '') {
+            return back()
+                ->withInput()
+                ->withErrors(['falla' => 'Selecciona un servicio o describe la falla para solicitar reparación.']);
+        }
 
         $empresa = $this->resolverEmpresa();
         $empresaId = (int) $empresa->id;
@@ -283,50 +303,68 @@ class ClienteTallerController extends Controller
             return redirect()->route('taller.computadoras.cliente.login');
         }
 
-        $clientes = $this->cargarClientes($empresaId);
+        $serieLimpia = trim((string) ($datos['numero_serie'] ?? $datos['serie'] ?? ''));
         $nombreEquipo = trim($datos['tipo_equipo'] . ' ' . $datos['marca'] . ' ' . $datos['modelo']);
         $equipoId = 'eq_' . Str::lower(Str::random(8));
 
+        $clientes = $this->cargarClientes($empresaId);
         foreach ($clientes as &$c) {
-            if ($c['id'] === $cliente['id']) {
+            if (($c['id'] ?? null) === ($cliente['id'] ?? null)) {
                 $c['equipos'] = $c['equipos'] ?? [];
-                $c['equipos'][] = [
-                    'id' => $equipoId,
-                    'tipo' => trim($datos['tipo_equipo']),
-                    'marca' => trim($datos['marca']),
-                    'modelo' => trim($datos['modelo']),
-                    'nombre_completo' => $nombreEquipo,
-                    'serie' => trim((string) ($datos['serie'] ?? '')),
-                    'registrado_en' => now()->format('Y-m-d H:i'),
-                ];
+                $encontrado = false;
+                foreach ($c['equipos'] as $eqExistente) {
+                    $mismoNombre = mb_strtolower(trim((string) ($eqExistente['nombre'] ?? ''))) === mb_strtolower($nombreEquipo);
+                    $mismaSerie = $serieLimpia !== '' && mb_strtolower(trim((string) ($eqExistente['serie'] ?? ''))) === mb_strtolower($serieLimpia);
+                    if ($mismaSerie || ($mismoNombre && $serieLimpia === '')) {
+                        $equipoId = (string) ($eqExistente['id'] ?? $equipoId);
+                        $encontrado = true;
+                        break;
+                    }
+                }
+                if (! $encontrado) {
+                    $c['equipos'][] = [
+                        'id' => $equipoId,
+                        'nombre' => $nombreEquipo,
+                        'tipo_equipo' => trim($datos['tipo_equipo']),
+                        'marca' => trim($datos['marca']),
+                        'modelo' => trim($datos['modelo']),
+                        'serie' => $serieLimpia,
+                        'registrado_en' => now()->format('Y-m-d H:i'),
+                    ];
+                }
                 break;
             }
         }
         unset($c);
         $this->guardarClientes($empresaId, $clientes);
 
+        if ($soloEquipo) {
+            return redirect()->route('taller.computadoras.cliente.portal')
+                ->with('status', 'Equipo "' . $nombreEquipo . '" registrado en tus equipos. Ya puedes solicitar reparación cuando lo requieras.');
+        }
+
         $ordenes = $this->cargarOrdenes($empresaId);
-        $folio = 'ORD-' . date('Ymd') . '-' . random_int(1000, 9999);
+        $folio = 'ORD-' . now()->format('Y') . '-' . strtoupper(Str::random(5));
         $ahora = now()->format('Y-m-d H:i');
 
         $ordenes[] = [
             'id' => 'ord_' . Str::lower(Str::random(10)),
             'folio' => $folio,
             'cliente_id' => $cliente['id'],
-            'cliente_nombre' => $cliente['nombre'],
-            'cliente_correo' => $cliente['email'],
+            'cliente_nombre' => $cliente['nombre'] ?? 'Cliente',
             'equipo_id' => $equipoId,
             'equipo' => $nombreEquipo,
             'tipo_equipo' => trim($datos['tipo_equipo']),
-            'serie' => trim((string) ($datos['serie'] ?? '')),
-            'falla' => trim($datos['falla']),
+            'serie' => $serieLimpia,
+            'servicio' => $servicioElegido,
+            'falla' => $fallaTexto,
             'estado' => 'Recepción',
             'diagnostico' => 'Pendiente de revisión técnica en taller.',
             'costo_estimado' => null,
             'actualizado_en' => $ahora,
             'historial' => [[
                 'estado' => 'Recepción',
-                'nota' => 'Equipo registrado por el cliente. Falla: ' . trim($datos['falla']),
+                'nota' => 'Orden generada por el cliente. Detalle: ' . $fallaTexto,
                 'fecha' => $ahora,
             ]],
         ];
@@ -336,7 +374,6 @@ class ClienteTallerController extends Controller
         return redirect()->route('taller.computadoras.cliente.portal')
             ->with('status', 'Equipo "' . $nombreEquipo . '" registrado y orden ' . $folio . ' creada en estado Recepción.');
     }
-
     public function autorizarOrden(Request $request, string $ordenId): RedirectResponse
     {
         $empresa = $this->resolverEmpresa();

@@ -229,6 +229,23 @@
                     </select>
                 </div>
 
+                                @php
+                    $equiposRegistrados = $datosCliente['equipos'] ?? $equipos ?? [];
+                @endphp
+                @if(count($equiposRegistrados) > 0)
+                    <div>
+                        <label class="block text-xs mb-1" style="color: var(--taller-muted);">Usar un equipo ya registrado (opcional)</label>
+                        <select id="equipoRegistradoSelect" class="w-full px-3.5 py-2 taller-input text-sm">
+                            <option value="">-- Escribir equipo manualmente --</option>
+                            @foreach($equiposRegistrados as $eqItem)
+                                <option value="{{ $eqItem['tipo_equipo'] ?? 'Laptop' }}|{{ $eqItem['marca'] ?? '' }}|{{ $eqItem['modelo'] ?? '' }}|{{ $eqItem['numero_serie'] ?? '' }}">
+                                    {{ $eqItem['tipo_equipo'] ?? 'Equipo' }} — {{ $eqItem['marca'] ?? '' }} {{ $eqItem['modelo'] ?? '' }}{{ !empty($eqItem['numero_serie']) ? ' (' . $eqItem['numero_serie'] . ')' : '' }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                @endif
+
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                         <label class="block text-xs mb-1" style="color: var(--taller-muted);">Tipo de equipo</label>
@@ -376,8 +393,8 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
                     @foreach($equipos as $eq)
                         <div class="p-3 taller-input space-y-1">
-                            <p class="font-semibold">{{ $eq['nombre_completo'] }}</p>
-                            <p style="color: var(--taller-muted);">Tipo: {{ $eq['tipo'] }}</p>
+                            <p class="font-semibold">{{ ($eq['nombre_completo'] ?? $eq['nombre'] ?? trim(($eq['tipo_equipo'] ?? '') . ' ' . ($eq['marca'] ?? '') . ' ' . ($eq['modelo'] ?? ''))) }}</p>
+                            <p style="color: var(--taller-muted);">Tipo: {{ ($eq['tipo'] ?? $eq['tipo_equipo'] ?? 'Equipo') }}</p>
                             @if(!empty($eq['serie']))
                                 <p style="color: var(--taller-muted);">Serie: {{ $eq['serie'] }}</p>
                             @endif
@@ -427,3 +444,22 @@
     </script>
 </body>
 </html>
+
+        <script>
+            (function () {
+                const selEq = document.getElementById('equipoRegistradoSelect');
+                if (!selEq) return;
+                const formRep = selEq.closest('form');
+                if (!formRep) return;
+                const selTipo = formRep.querySelector('select[name="tipo_equipo"]');
+                const inpMarca = formRep.querySelector('input[name="marca"]');
+                const inpModelo = formRep.querySelector('input[name="modelo"]');
+                selEq.addEventListener('change', function () {
+                    if (!selEq.value) return;
+                    const partes = selEq.value.split('|');
+                    if (selTipo && partes[0]) selTipo.value = partes[0];
+                    if (inpMarca && partes[1] !== undefined) inpMarca.value = partes[1];
+                    if (inpModelo && partes[2] !== undefined) inpModelo.value = partes[2];
+                });
+            })();
+        </script>

@@ -5,7 +5,17 @@
         "email": "cliente1@pruebas.local",
         "telefono": "6621234567",
         "password": "$2y$12$YVtFTsRPmk5XtlpopNOFQOymWwGBEQKvW9LwTwtzeZRWn5evPPTJC",
-        "equipos": [],
+        "equipos": [
+            {
+                "id": "eq_qxof9mpj",
+                "nombre": "Laptop DELL DELL Pro 14",
+                "tipo_equipo": "Laptop",
+                "marca": "DELL",
+                "modelo": "DELL Pro 14",
+                "serie": "",
+                "registrado_en": "2026-11-26 17:38"
+            }
+        ],
         "creado_en": "2026-11-26 16:38"
     }
 ]
