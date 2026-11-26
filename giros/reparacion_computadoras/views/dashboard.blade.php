@@ -58,6 +58,11 @@
                 <a href="{{ route('taller.computadoras.dashboard') }}" class="block px-3 py-2 rounded-lg font-medium" style="background-color: var(--taller-primary); color: #fff;">
                     Dashboard
                 </a>
+                                @if(in_array(mb_strtolower((string) ($usuario->rol_empresa ?? '')), ['propietario', 'gerente', 'subgerente', 'admin', 'administrador'], true))
+                    <a href="{{ route('taller.computadoras.ordenes') }}" class="block px-3 py-2 rounded-lg hover:opacity-90" style="background-color: var(--taller-surface);">
+                        Órdenes solicitadas
+                    </a>
+                @endif
                 <a href="{{ route('taller.computadoras.autogestion', ['ambito' => 'publica']) }}" class="block px-3 py-2 rounded-lg hover:opacity-90" style="background-color: var(--taller-surface);">
                     Autogestión página pública
                 </a>
@@ -109,7 +114,7 @@
                     <p class="text-3xl font-bold mt-2">{{ $metricas['refacciones_bajas'] }}</p>
                 </div>
                 <div class="taller-card p-5">
-                    <p class="text-xs" style="color: var(--taller-muted);">Equipo activo</p>
+                    <p class="text-xs" style="color: var(--taller-muted);">Equipo de trabajo activo</p>
                     <p class="text-3xl font-bold mt-2">{{ $metricas['equipo_activo'] }}</p>
                 </div>
             </section>
@@ -134,12 +139,26 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y" style="border-color: var(--taller-border);">
+                                @php
+    $badgeEstado = function (?string $est): array {
+        $k = mb_strtolower(trim((string) $est));
+        return match (true) {
+            str_contains($k, 'recep') || str_contains($k, 'recibid') => ['bg' => 'rgba(59, 130, 246, 0.16)', 'border' => 'rgba(59, 130, 246, 0.45)', 'text' => '#93c5fd'],
+            str_contains($k, 'diagn') => ['bg' => 'rgba(245, 158, 11, 0.16)', 'border' => 'rgba(245, 158, 11, 0.45)', 'text' => '#fcd34d'],
+            str_contains($k, 'repar') || str_contains($k, 'proceso') => ['bg' => 'rgba(139, 92, 246, 0.16)', 'border' => 'rgba(139, 92, 246, 0.45)', 'text' => '#c4b5fd'],
+            str_contains($k, 'listo') || str_contains($k, 'lista') => ['bg' => 'rgba(16, 185, 129, 0.16)', 'border' => 'rgba(16, 185, 129, 0.45)', 'text' => '#6ee7b7'],
+            str_contains($k, 'entreg') => ['bg' => 'rgba(100, 116, 139, 0.18)', 'border' => 'rgba(148, 163, 184, 0.45)', 'text' => '#cbd5e1'],
+            str_contains($k, 'cancel') => ['bg' => 'rgba(239, 68, 68, 0.16)', 'border' => 'rgba(239, 68, 68, 0.45)', 'text' => '#fca5a5'],
+            default => ['bg' => 'rgba(99, 102, 241, 0.16)', 'border' => 'rgba(99, 102, 241, 0.45)', 'text' => '#a5b4fc'],
+        };
+    };
+@endphp
                                 @foreach($ultimasOrdenes as $orden)
                                     <tr>
                                         <td class="py-2.5 pr-3 font-mono">{{ $orden->folio ?? ('#' . $orden->id) }}</td>
                                         <td class="py-2.5 pr-3">{{ $orden->cliente_nombre ?? '—' }}</td>
                                         <td class="py-2.5 pr-3">{{ $orden->equipo_tipo ?? $orden->equipo ?? '—' }}</td>
-                                        <td class="py-2.5 pr-3 uppercase">{{ $orden->estado ?? 'recibida' }}</td>
+                                        <td class="py-2.5 pr-3">@php $stDash = $badgeEstado($orden->estado ?? 'recibida'); @endphp<span class="inline-block text-[11px] font-semibold uppercase px-2 py-0.5 rounded border" style="background-color: {{ $stDash['bg'] }}; border-color: {{ $stDash['border'] }}; color: {{ $stDash['text'] }};">{{ $orden->estado ?? 'recibida' }}</span></td>
                                     </tr>
                                 @endforeach
                             </tbody>

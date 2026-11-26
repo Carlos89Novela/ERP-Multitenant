@@ -352,16 +352,56 @@
                                 @endif
                             </div>
 
-                            @if($estadoActual === 'En espera de autorización')
-                                <form method="POST" action="{{ route('taller.computadoras.cliente.ordenes.autorizar', ['ordenId' => $ord['id']]) }}">
-                                    @csrf
-                                    <button type="submit" class="w-full py-2 px-3 text-xs font-semibold rounded bg-emerald-600 text-white hover:bg-emerald-500 transition">
-                                        Autorizar reparación
-                                    </button>
-                                </form>
-                            @endif
-
-                            @if(!empty($ord['historial']))
+                            @if(($ord['estado'] ?? '') !== 'En espera de autorización' && !empty($ord['servicios_sugeridos']))
+                                    <div class="mt-2 p-2.5 rounded taller-surface text-[11px]" style="color: var(--taller-muted);">
+                                        Servicios sugeridos registrados: {{ implode(', ', (array) $ord['servicios_sugeridos']) }}. Se habilitarán para aceptar o rechazar cuando la orden pase a <strong>En espera de autorización</strong>.
+                                    </div>
+                                @endif
+                                @if(($ord['estado'] ?? '') === 'En espera de autorización')
+                                    @php
+                                        $itemsCotPortal = is_array($ord['cotizacion_items'] ?? null) && ! empty($ord['cotizacion_items'])
+                                            ? $ord['cotizacion_items']
+                                            : array_map(fn ($s) => ['servicio' => $s, 'precio' => 0, 'motivo' => ($ord['motivos_servicios_sugeridos'][$s] ?? '')], (array) ($ord['servicios_sugeridos'] ?? []));
+                                    @endphp
+                                    <form method="POST" action="{{ route('taller.computadoras.cliente.ordenes.autorizar', ['ordenId' => $ord['id']]) }}" class="mt-3 p-3 rounded taller-surface space-y-3 text-xs">
+                                        @csrf
+                                        <p class="font-semibold" style="color: var(--taller-accent);">Revisión de cotización — responde cada servicio sugerido:</p>
+                                        @if(!empty($itemsCotPortal))
+                                            <div class="space-y-2">
+                                                @foreach($itemsCotPortal as $idxSrv => $itSrv)
+                                                    <div class="p-2.5 rounded border space-y-1.5" style="border-color: var(--taller-border); background-color: var(--taller-card);">
+                                                        <div class="flex flex-wrap items-center justify-between gap-2">
+                                                            <span class="font-semibold">{{ $itSrv['servicio'] ?? '' }}</span>
+                                                            @if(!empty($itSrv['precio']))
+                                                                <span class="font-mono" style="color: var(--taller-accent);">${{ number_format((float) $itSrv['precio'], 2) }}</span>
+                                                            @endif
+                                                        </div>
+                                                        @if(!empty($itSrv['motivo']))
+                                                            <p class="text-[11px]" style="color: var(--taller-muted);">Motivo del técnico: {{ $itSrv['motivo'] }}</p>
+                                                        @endif
+                                                        <div class="flex items-center gap-4 pt-1">
+                                                            <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                                                                <input type="radio" name="decisiones_servicios[{{ $idxSrv }}]" value="aceptar" checked>
+                                                                <span>Aceptar</span>
+                                                            </label>
+                                                            <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                                                                <input type="radio" name="decisiones_servicios[{{ $idxSrv }}]" value="rechazar">
+                                                                <span>Rechazar</span>
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        @endif
+                                        <button type="submit" class="px-4 py-2 rounded-lg font-semibold" style="background-color: var(--taller-accent); color: #09090b;">
+                                            Confirmar respuesta de cotización
+                                        </button>
+                                    </form>
+                                @endif
+                                @if(!empty($ord['cotizacion_resumen']))
+                                    <p class="mt-2 text-[11px]" style="color: var(--taller-muted);">{{ $ord['cotizacion_resumen'] }}</p>
+                                @endif
+                                @if(!empty($ord['historial']))
                                 <div class="pt-3 border-t space-y-2" style="border-color: var(--taller-border);">
                                     <p class="text-[11px] font-semibold uppercase tracking-wider" style="color: var(--taller-muted);">Historial de estados</p>
                                     <ul class="space-y-1.5 text-xs">

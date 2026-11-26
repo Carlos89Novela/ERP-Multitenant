@@ -44,15 +44,39 @@ class DashboardTallerController extends Controller
             ->where('activo', true)
             ->count();
 
-        if ($schema->hasTable('ordenes_reparacion')) {
+        $rutaJsonOrdenes = storage_path("app/giros/reparacion_computadoras/empresa_{$usuario->empresa_id}_ordenes.json");
+        $ordenesJson = [];
+        if (file_exists($rutaJsonOrdenes)) {
+            $decoded = json_decode((string) file_get_contents($rutaJsonOrdenes), true);
+            if (is_array($decoded)) {
+                $ordenesJson = array_values(array_filter($decoded, fn ($item) => is_array($item)));
+            }
+        }
+
+        if (! empty($ordenesJson)) {
+            $abiertas = 0;
+            $listas = 0;
+            foreach ($ordenesJson as $ord) {
+                $est = mb_strtolower(trim((string) ($ord['estado'] ?? '')));
+                if (! in_array($est, ['entregada', 'entregado', 'cancelada', 'cancelado'], true)) {
+                    $abiertas++;
+                }
+                if (str_contains($est, 'lista') || str_contains($est, 'listo')) {
+                    $listas++;
+                }
+            }
+            $ordenesAbiertas = $abiertas;
+            $ordenesListas = $listas;
+            $ultimasOrdenes = collect(array_slice($ordenesJson, 0, 8))->map(fn ($o) => (object) $o);
+        } elseif ($schema->hasTable('ordenes_reparacion')) {
             $ordenesAbiertas = $conn->table('ordenes_reparacion')
                 ->where('empresa_id', $usuario->empresa_id)
-                ->whereNotIn('estado', ['entregada', 'cancelada'])
+                ->whereNotIn('estado', ['entregada', 'cancelada', 'entregado', 'cancelado'])
                 ->count();
 
             $ordenesListas = $conn->table('ordenes_reparacion')
                 ->where('empresa_id', $usuario->empresa_id)
-                ->where('estado', 'lista')
+                ->whereIn('estado', ['lista', 'Listo para entrega'])
                 ->count();
 
             $ultimasOrdenes = $conn->table('ordenes_reparacion')
