@@ -10,10 +10,12 @@ require_once __DIR__ . '/../models/UsuarioTaller.php';
 require_once __DIR__ . '/../middleware/AutenticadoTaller.php';
 require_once __DIR__ . '/../controllers/LoginTallerController.php';
 require_once __DIR__ . '/../controllers/DashboardTallerController.php';
+require_once __DIR__ . '/../controllers/OrdenesTallerController.php';
 
 use Giros\ReparacionComputadoras\Controllers\AutogestionTallerController;
 use Giros\ReparacionComputadoras\Controllers\ClienteTallerController;
 use Giros\ReparacionComputadoras\Controllers\DashboardTallerController;
+use Giros\ReparacionComputadoras\Controllers\OrdenesTallerController;
 use Giros\ReparacionComputadoras\Controllers\LoginTallerController;
 use Giros\ReparacionComputadoras\Controllers\PublicaTallerController;
 use Giros\ReparacionComputadoras\Middleware\AutenticadoTaller;
@@ -29,6 +31,12 @@ Route::middleware('web')->prefix('giros/reparacion-computadoras')->group(functio
     Route::middleware(AutenticadoTaller::class)->group(function () {
         Route::get('/', [DashboardTallerController::class, 'index'])
             ->name('taller.computadoras.dashboard');
+        Route::get('/ordenes', [OrdenesTallerController::class, 'index'])
+            ->name('taller.computadoras.ordenes');
+        Route::get('/ordenes/{folio}', [OrdenesTallerController::class, 'ver'])
+            ->name('taller.computadoras.ordenes.ver');
+        Route::post('/ordenes/{folio}/actualizar', [OrdenesTallerController::class, 'actualizar'])
+            ->name('taller.computadoras.ordenes.actualizar');
         Route::post('/logout', [LoginTallerController::class, 'logout'])
             ->name('taller.computadoras.logout');
     });

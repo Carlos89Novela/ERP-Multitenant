@@ -80,35 +80,15 @@ class ClienteTallerController extends Controller
     {
         $path = $this->rutaOrdenes($empresaId);
         if (! file_exists($path)) {
-            $demo = [[
-                'id' => 'ord-demo-1001',
-                'folio' => 'ORD-2026-1001',
-                'cliente_id' => null,
-                'cliente_nombre' => 'Cliente Mostrador',
-                'cliente_correo' => '',
-                'equipo' => 'Laptop HP Pavilion 15',
-                'tipo_equipo' => 'Laptop',
-                'serie' => '5CD2148X9A',
-                'falla' => 'No enciende y ventilador hace ruido al intentar arrancar',
-                'estado' => 'En reparación',
-                'diagnostico' => 'Limpieza térmica profunda, cambio de pasta y revisión de regulador de carga.',
-                'costo_estimado' => 850.00,
-                'actualizado_en' => now()->format('Y-m-d H:i'),
-                'historial' => [
-                    ['estado' => 'Recepción', 'nota' => 'Equipo recibido en mostrador.', 'fecha' => now()->subDays(2)->format('Y-m-d H:i')],
-                    ['estado' => 'Diagnóstico', 'nota' => 'Revisión térmica y de energía.', 'fecha' => now()->subDay()->format('Y-m-d H:i')],
-                    ['estado' => 'En reparación', 'nota' => 'En banco de trabajo.', 'fecha' => now()->format('Y-m-d H:i')],
-                ],
-            ]];
-            $this->guardarOrdenes($empresaId, $demo);
+            $this->guardarOrdenes($empresaId, []);
 
-            return $demo;
+            return [];
         }
+
         $data = json_decode((string) file_get_contents($path), true);
 
         return is_array($data) ? array_values($data) : [];
     }
-
     protected function guardarOrdenes(int $empresaId, array $ordenes): void
     {
         file_put_contents(
@@ -383,21 +363,101 @@ class ClienteTallerController extends Controller
             return redirect()->route('taller.computadoras.cliente.login');
         }
 
+        $decisiones = (array) $request->input('decisiones_servicios', []);
         $ordenes = $this->cargarOrdenes($empresaId);
         $actualizada = false;
+        $mensajeEstado = 'Reparación autorizada.';
 
         foreach ($ordenes as &$ord) {
             if (($ord['id'] ?? '') === $ordenId && ($ord['cliente_id'] ?? '') === $cliente['id']) {
                 if (($ord['estado'] ?? '') === 'En espera de autorización') {
                     $ahora = now()->format('Y-m-d H:i');
-                    $ord['estado'] = 'En reparación';
-                    $ord['actualizado_en'] = $ahora;
-                    $ord['historial'][] = [
-                        'estado' => 'En reparación',
-                        'nota' => 'Autorizado por el cliente. Continúa la reparación.',
-                        'fecha' => $ahora,
-                    ];
-                    $actualizada = true;
+                    $itemsCot = is_array($ord['cotizacion_items'] ?? null) ? $ord['cotizacion_items'] : [];
+                    $sugeridos = is_array($ord['servicios_sugeridos'] ?? null) ? $ord['servicios_sugeridos'] : [];
+
+                    if (empty($itemsCot) && ! empty($sugeridos)) {
+                        foreach ($sugeridos as $srvLbl) {
+                            $pr = 0.0;
+                            if (preg_match('/\(\$([0-9]+(?:\.[0-9]{1,2})?)\)/', (string) $srvLbl, $mP)) {
+                                $pr = (float) $mP[1];
+                            }
+                            $itemsCot[] = [
+                                'servicio' => (string) $srvLbl,
+                                'precio' => $pr,
+                                'motivo' => (string) ($ord['motivos_servicios_sugeridos'][$srvLbl] ?? ''),
+                                'decision' => 'pendiente',
+                            ];
+                        }
+                    }
+
+                    if (! empty($itemsCot)) {
+                        $aceptados = [];
+                        $rechazados = [];
+                        $totalAceptado = 0.0;
+
+                        foreach ($itemsCot as $idx => &$it) {
+                            $srvNombre = (string) ($it['servicio'] ?? '');
+                            $dec = strtolower(trim((string) ($decisiones[$idx] ?? $decisiones[$srvNombre] ?? 'aceptar')));
+                            if (str_starts_with($dec, 'rechaz')) {
+                                $it['decision'] = 'rechazada';
+                                $rechazados[] = $srvNombre;
+                            } else {
+                                $it['decision'] = 'aceptada';
+                                $aceptados[] = $srvNombre;
+                                $totalAceptado += (float) ($it['precio'] ?? 0);
+                            }
+                        }
+                        unset($it);
+
+                        $ord['cotizacion_items'] = $itemsCot;
+                        $ord['servicios_aceptados'] = $aceptados;
+                        $ord['servicios_rechazados'] = $rechazados;
+                        $ord['actualizado_en'] = $ahora;
+
+                        if (count($aceptados) === 0) {
+                            // Rechazo total de servicios: NO se cancela automaticamente la orden; queda para retiro en mostrador
+                            $ord['autorizacion'] = 'Rechazada';
+                            $ord['estado'] = 'Listo para entrega';
+                            $ord['costo_estimado'] = 0.0;
+                            $ord['cotizacion_resumen'] = 'Cliente rechazó todos los servicios sugeridos. Equipo listo para retiro/entrega en mostrador (cancelación y liberación por mostrador).';
+                            $mensajeEstado = 'Rechazaste los servicios sugeridos. La orden no se cancela automáticamente: el equipo queda disponible para retiro/entrega en mostrador.';
+                            $ord['historial'][] = [
+                                'estado' => $ord['estado'],
+                                'nota' => 'Cliente rechazó todos los servicios sugeridos (' . implode(', ', $rechazados) . '). Equipo disponible para retiro en mostrador; cancelación y liberación a cargo de mostrador.',
+                                'fecha' => $ahora,
+                            ];
+                        } else {
+                            // Al menos un servicio aceptado (parcial o total)
+                            $ord['autorizacion'] = 'Autorizada';
+                            $ord['fecha_autorizacion'] = $ahora;
+                            $ord['estado'] = 'En reparación';
+                            $ord['costo_estimado'] = round($totalAceptado, 2);
+                            $ord['cotizacion_resumen'] = 'Aceptados: ' . implode(', ', $aceptados)
+                                . (! empty($rechazados) ? ' | Rechazados: ' . implode(', ', $rechazados) : '');
+                            $mensajeEstado = count($rechazados) > 0
+                                ? 'Cotización respondida parcialmente: se autorizaron los servicios aceptados y se descartaron los rechazados.'
+                                : 'Cotización autorizada. Continúa la reparación con los servicios seleccionados.';
+                            $ord['historial'][] = [
+                                'estado' => 'En reparación',
+                                'nota' => 'Decisión del cliente — Aceptados: ' . implode(', ', $aceptados)
+                                    . (! empty($rechazados) ? ' · Rechazados: ' . implode(', ', $rechazados) : '')
+                                    . ' (Total autorizado: $' . number_format($totalAceptado, 2) . ').',
+                                'fecha' => $ahora,
+                            ];
+                        }
+                        $actualizada = true;
+                    } else {
+                        $ord['estado'] = 'En reparación';
+                        $ord['autorizacion'] = 'Autorizada';
+                        $ord['fecha_autorizacion'] = $ahora;
+                        $ord['actualizado_en'] = $ahora;
+                        $ord['historial'][] = [
+                            'estado' => 'En reparación',
+                            'nota' => 'Autorizado por el cliente. Continúa la reparación.',
+                            'fecha' => $ahora,
+                        ];
+                        $actualizada = true;
+                    }
                 }
                 break;
             }
@@ -407,9 +467,9 @@ class ClienteTallerController extends Controller
         if ($actualizada) {
             $this->guardarOrdenes($empresaId, $ordenes);
 
-            return back()->with('status', 'Reparación autorizada.');
+            return back()->with('status', $mensajeEstado);
         }
 
-        return back()->withErrors(['orden' => 'Solo puedes autorizar órdenes en espera de autorización.']);
+        return back()->with('error', 'No fue posible actualizar la autorización de la orden.');
     }
 }
