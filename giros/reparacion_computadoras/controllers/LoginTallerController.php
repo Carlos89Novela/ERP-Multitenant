@@ -67,6 +67,10 @@ class LoginTallerController extends Controller
     public function showLogin(Request $request)
     {
         if ($this->restaurarSesionPersistenteSiAplica($request)) {
+            $uAct = UsuarioTaller::query()->find($request->session()->get('taller_computadoras.usuario_id'));
+            if ($uAct && (bool) $uAct->debe_cambiar_password) {
+                return redirect()->route('taller.computadoras.password.temporal');
+            }
             return redirect()->route('taller.computadoras.dashboard');
         }
 
@@ -148,7 +152,9 @@ class LoginTallerController extends Controller
             'nombre' => $usuario->name,
         ]);
 
-        $respuesta = redirect()->route('taller.computadoras.dashboard');
+        $respuesta = (bool) $usuario->debe_cambiar_password
+            ? redirect()->route('taller.computadoras.password.temporal')
+            : redirect()->route('taller.computadoras.dashboard');
 
         if ($recordarUsuario) {
             $respuesta->withCookie(Cookie::make(

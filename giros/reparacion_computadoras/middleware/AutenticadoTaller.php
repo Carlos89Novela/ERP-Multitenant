@@ -17,6 +17,7 @@ class AutenticadoTaller
             return redirect()->route('taller.computadoras.login');
         }
 
+        /** @var UsuarioTaller|null $usuario */
         $usuario = UsuarioTaller::query()
             ->where('id', $usuarioId)
             ->where('activo', true)
@@ -28,6 +29,17 @@ class AutenticadoTaller
         }
 
         $request->attributes->set('usuario_taller', $usuario);
+
+        $rutaActual = $request->route()?->getName();
+        $rutasPermitidasConTemporal = [
+            'taller.computadoras.password.temporal',
+            'taller.computadoras.password.temporal.guardar',
+            'taller.computadoras.logout',
+        ];
+
+        if ((bool) $usuario->debe_cambiar_password && ! in_array($rutaActual, $rutasPermitidasConTemporal, true)) {
+            return redirect()->route('taller.computadoras.password.temporal');
+        }
 
         return $next($request);
     }

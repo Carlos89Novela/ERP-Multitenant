@@ -25,7 +25,7 @@ class AjusteInventarioTallerService
         ?UsuarioTaller $usuario,
         array $datos
     ): ExistenciaAlmacenTaller {
-        ContextoPropietarioTaller::validarPropietario($usuario);
+        ContextoPropietarioTaller::validarOperadorInventario($usuario);
 
         $cantidadObjetivo = $this->normalizarDecimal($datos['cantidad_objetivo'] ?? null);
         $motivo = is_string($datos['motivo'] ?? null) ? trim((string) $datos['motivo']) : '';

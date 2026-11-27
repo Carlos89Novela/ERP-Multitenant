@@ -4,18 +4,21 @@ namespace Giros\ReparacionComputadoras\Services;
 
 use Giros\ReparacionComputadoras\Models\AlmacenTaller;
 use Giros\ReparacionComputadoras\Models\SucursalTaller;
+use Giros\ReparacionComputadoras\Models\UsuarioTaller;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class GestionAlmacenesTallerService
 {
-    /**
-     * Obtiene o crea la sucursal matriz y su almacén principal,
-     * además de garantizar el almacén virtual de traspaso/tránsito.
-     *
-     * @return array{matriz: SucursalTaller, almacen_matriz: AlmacenTaller, almacen_transito: AlmacenTaller}
-     */
+    public const ROLES_SUCURSAL = [
+        'gerente' => 'Gerente',
+        'subgerente' => 'Subgerente',
+        'tecnico' => 'Técnico',
+        'mostrador' => 'Mostrador',
+    ];
+
     public function asegurarEstructuraBase(string $nombreMatriz = 'Sucursal Matriz', string $codigoMatriz = 'SUC-MATRIZ'): array
     {
         ContextoPropietarioTaller::conexion();
@@ -54,6 +57,10 @@ class GestionAlmacenesTallerService
             $almacenMatriz = $this->asegurarAlmacenDeSucursal($matriz, AlmacenTaller::TIPO_PRINCIPAL);
             $almacenTransito = $this->asegurarAlmacenTransito();
 
+            UsuarioTaller::query()
+                ->whereNull('sucursal_id')
+                ->update(['sucursal_id' => (int) $matriz->id]);
+
             return [
                 'matriz' => $matriz->fresh(),
                 'almacen_matriz' => $almacenMatriz->fresh(),
@@ -63,11 +70,11 @@ class GestionAlmacenesTallerService
     }
 
     /**
-     * Crea una nueva sucursal (por ejemplo, una segunda sucursal) y genera
-     * automáticamente su almacén asociado.
+     * Crea una sucursal, su almacén y automáticamente los usuarios con roles:
+     * gerente, subgerente, tecnico y mostrador vinculados a esa sucursal.
      *
-     * @param  array{codigo?: mixed, nombre?: mixed, es_matriz?: mixed}  $datos
-     * @return array{sucursal: SucursalTaller, almacen: AlmacenTaller}
+     * @param  array{codigo?: mixed, nombre?: mixed, es_matriz?: mixed, empresa_id?: mixed}  $datos
+     * @return array{sucursal: SucursalTaller, almacen: AlmacenTaller, usuarios_creados: list<array{rol: string, name: string, email: string, password_temporal: string}>}
      */
     public function crearSucursalConAlmacen(array $datos): array
     {
@@ -94,8 +101,10 @@ class GestionAlmacenesTallerService
         }
 
         $esMatriz = filter_var($datos['es_matriz'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $empresaId = filter_var($datos['empresa_id'] ?? null, FILTER_VALIDATE_INT);
+        $empresaIdLimpio = ($empresaId !== false && (int) $empresaId > 0) ? (int) $empresaId : 1;
 
-        return DB::connection('taller_rep_db')->transaction(function () use ($nombre, $codigoRaw, $esMatriz): array {
+        return DB::connection('taller_rep_db')->transaction(function () use ($nombre, $codigoRaw, $esMatriz, $empresaIdLimpio): array {
             if (SucursalTaller::query()->where('codigo', $codigoRaw)->lockForUpdate()->exists()) {
                 throw ValidationException::withMessages([
                     'codigo' => "Ya existe una sucursal con el código {$codigoRaw}.",
@@ -108,7 +117,7 @@ class GestionAlmacenesTallerService
 
             /** @var SucursalTaller $sucursal */
             $sucursal = SucursalTaller::query()->create([
-                'empresa_id' => 1,
+                'empresa_id' => $empresaIdLimpio,
                 'codigo' => $codigoRaw,
                 'nombre' => $nombre,
                 'es_matriz' => $esMatriz,
@@ -119,16 +128,80 @@ class GestionAlmacenesTallerService
             $almacen = $this->asegurarAlmacenDeSucursal($sucursal, $tipoAlmacen);
             $this->asegurarAlmacenTransito();
 
+            $usuariosCreados = $this->crearUsuariosBaseSucursal($sucursal, $empresaIdLimpio);
+
             return [
                 'sucursal' => $sucursal->fresh(),
                 'almacen' => $almacen->fresh(),
+                'usuarios_creados' => $usuariosCreados,
             ];
         }, 3);
     }
 
     /**
-     * Garantiza que la sucursal tenga su almacén creado y activo.
+     * @return list<array{rol: string, name: string, email: string, password_temporal: string}>
      */
+    public function crearUsuariosBaseSucursal(SucursalTaller $sucursal, int $empresaId = 1): array
+    {
+        $dominio = $this->resolverDominioBase($empresaId);
+        $sucId = (int) $sucursal->id;
+        $passwordTemporal = 'Taller2026!';
+        $ahora = now();
+
+        $creados = [];
+        foreach (self::ROLES_SUCURSAL as $rol => $etiquetaRol) {
+            $emailBase = "{$rol}.suc{$sucId}@{$dominio}";
+            $email = $emailBase;
+            $contador = 1;
+            while (UsuarioTaller::query()->where('email', $email)->exists()) {
+                $email = "{$rol}.suc{$sucId}.{$contador}@{$dominio}";
+                $contador++;
+            }
+
+            $nombreUsuario = "{$etiquetaRol} — {$sucursal->nombre}";
+
+            UsuarioTaller::query()->create([
+                'empresa_id' => $empresaId,
+                'name' => $nombreUsuario,
+                'email' => $email,
+                'password' => Hash::make($passwordTemporal),
+                'rol_empresa' => $rol,
+                'sucursal_id' => $sucId,
+                'debe_cambiar_password' => true,
+                'password_temporal_generada_at' => $ahora,
+                'activo' => true,
+            ]);
+
+            $creados[] = [
+                'rol' => $rol,
+                'name' => $nombreUsuario,
+                'email' => $email,
+                'password_temporal' => $passwordTemporal,
+            ];
+        }
+
+        return $creados;
+    }
+
+    public function resolverDominioBase(int $empresaId = 1): string
+    {
+        $prop = UsuarioTaller::query()
+            ->where('empresa_id', $empresaId)
+            ->where('rol_empresa', 'propietario')
+            ->whereNotNull('email')
+            ->first();
+
+        if ($prop && str_contains((string) $prop->email, '@')) {
+            $partes = explode('@', (string) $prop->email, 2);
+            $dom = strtolower(trim($partes[1] ?? ''));
+            if ($dom !== '') {
+                return $dom;
+            }
+        }
+
+        return 'canodevops.local';
+    }
+
     public function asegurarAlmacenDeSucursal(SucursalTaller $sucursal, string $tipo = AlmacenTaller::TIPO_SECUNDARIO): AlmacenTaller
     {
         /** @var AlmacenTaller|null $existente */
@@ -169,9 +242,6 @@ class GestionAlmacenesTallerService
         return $almacen;
     }
 
-    /**
-     * Garantiza que exista el almacén virtual de traspaso/tránsito.
-     */
     public function asegurarAlmacenTransito(): AlmacenTaller
     {
         /** @var AlmacenTaller|null $transito */

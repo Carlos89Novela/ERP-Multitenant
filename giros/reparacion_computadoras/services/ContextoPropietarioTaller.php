@@ -76,6 +76,29 @@ class ContextoPropietarioTaller
         return $usuario;
     }
 
+
+    /**
+     * Valida que el usuario tenga rol propietario, gerente o subgerente
+     * para operar inventario, existencias, kardex y traspasos.
+     */
+    public static function validarOperadorInventario(?UsuarioTaller $usuario): UsuarioTaller
+    {
+        if (! $usuario) {
+            throw new AuthorizationException('Debes iniciar sesión en el taller.');
+        }
+
+        $rol = strtolower(trim((string) ($usuario->rol_empresa ?? '')));
+        $rolesPermitidos = ['propietario', 'gerente', 'subgerente', 'sub_gerente'];
+
+        if (! in_array($rol, $rolesPermitidos, true)) {
+            throw new AuthorizationException('Solo propietario, gerente o subgerente tienen acceso a este módulo.');
+        }
+
+        self::conexion();
+
+        return $usuario;
+    }
+
     public static function conexion(): Connection
     {
         $nombreBd = self::resolverNombreBaseDatos();

@@ -567,6 +567,29 @@ foreach ($lista as &$ord) {
                 $huboCambios = true;
             }
 
+            $esAvanceTecnico = $esReparacion || str_contains($estadoNuevoNorm, 'prueba') || $esListo || $esEntregado;
+            if ($esAvanceTecnico && ! empty($ord['cotizacion_opciones_inventario']) && is_array($ord['cotizacion_opciones_inventario'])) {
+                require_once __DIR__ . '/../services/CotizacionReservaInventarioTallerService.php';
+                $srvRes = new \Giros\ReparacionComputadoras\Services\CotizacionReservaInventarioTallerService();
+                $resConsumo = $srvRes->consumirOpcionElegidaAlAvanzarOrden(
+                    (string) ($ord['folio'] ?? $folio),
+                    $ord['cotizacion_opciones_inventario'],
+                    $usuario,
+                    $empresaId
+                );
+                $ord['cotizacion_opciones_inventario'] = $resConsumo['opciones'];
+                if (! empty($resConsumo['consumidos'])) {
+                    $ord['partes_consumidas'] = array_merge(
+                        is_array($ord['partes_consumidas'] ?? null) ? $ord['partes_consumidas'] : [],
+                        $resConsumo['consumidos']
+                    );
+                    $partesHistorial[] = 'Refacciones consumidas: ' . implode(', ', array_map(
+                        fn ($c) => ($c['producto_nombre'] ?? 'Refacción') . ' x' . ($c['cantidad'] ?? '1'),
+                        $resConsumo['consumidos']
+                    ));
+                }
+            }
+
             if ($cambioEstado) {
                 $ord['estado'] = $estadoNuevo;
                 $huboCambios = true;
@@ -640,6 +663,29 @@ foreach ($lista as &$ord) {
                 $huboCambios = true;
             }
 
+            $esAvanceTecnico = $esReparacion || str_contains($estadoNuevoNorm, 'prueba') || $esListo || $esEntregado;
+            if ($esAvanceTecnico && ! empty($ord['cotizacion_opciones_inventario']) && is_array($ord['cotizacion_opciones_inventario'])) {
+                require_once __DIR__ . '/../services/CotizacionReservaInventarioTallerService.php';
+                $srvRes = new \Giros\ReparacionComputadoras\Services\CotizacionReservaInventarioTallerService();
+                $resConsumo = $srvRes->consumirOpcionElegidaAlAvanzarOrden(
+                    (string) ($ord['folio'] ?? $folio),
+                    $ord['cotizacion_opciones_inventario'],
+                    $usuario,
+                    $empresaId
+                );
+                $ord['cotizacion_opciones_inventario'] = $resConsumo['opciones'];
+                if (! empty($resConsumo['consumidos'])) {
+                    $ord['partes_consumidas'] = array_merge(
+                        is_array($ord['partes_consumidas'] ?? null) ? $ord['partes_consumidas'] : [],
+                        $resConsumo['consumidos']
+                    );
+                    $partesHistorial[] = 'Refacciones consumidas: ' . implode(', ', array_map(
+                        fn ($c) => ($c['producto_nombre'] ?? 'Refacción') . ' x' . ($c['cantidad'] ?? '1'),
+                        $resConsumo['consumidos']
+                    ));
+                }
+            }
+
             if ($cambioEstado) {
                 $ord['estado'] = $estadoNuevo;
                 $huboCambios = true;
@@ -690,6 +736,29 @@ foreach ($lista as &$ord) {
             }
 
             $partesHistorial = [];
+            $esAvanceTecnico = $esReparacion || str_contains($estadoNuevoNorm, 'prueba') || $esListo || $esEntregado;
+            if ($esAvanceTecnico && ! empty($ord['cotizacion_opciones_inventario']) && is_array($ord['cotizacion_opciones_inventario'])) {
+                require_once __DIR__ . '/../services/CotizacionReservaInventarioTallerService.php';
+                $srvRes = new \Giros\ReparacionComputadoras\Services\CotizacionReservaInventarioTallerService();
+                $resConsumo = $srvRes->consumirOpcionElegidaAlAvanzarOrden(
+                    (string) ($ord['folio'] ?? $folio),
+                    $ord['cotizacion_opciones_inventario'],
+                    $usuario,
+                    $empresaId
+                );
+                $ord['cotizacion_opciones_inventario'] = $resConsumo['opciones'];
+                if (! empty($resConsumo['consumidos'])) {
+                    $ord['partes_consumidas'] = array_merge(
+                        is_array($ord['partes_consumidas'] ?? null) ? $ord['partes_consumidas'] : [],
+                        $resConsumo['consumidos']
+                    );
+                    $partesHistorial[] = 'Refacciones consumidas: ' . implode(', ', array_map(
+                        fn ($c) => ($c['producto_nombre'] ?? 'Refacción') . ' x' . ($c['cantidad'] ?? '1'),
+                        $resConsumo['consumidos']
+                    ));
+                }
+            }
+
             if ($cambioEstado) {
                 $partesHistorial[] = 'Estado: ' . $estadoActual . ' → ' . $estadoNuevo;
             }

@@ -11,10 +11,28 @@ require_once __DIR__ . '/../middleware/AutenticadoTaller.php';
 require_once __DIR__ . '/../controllers/LoginTallerController.php';
 require_once __DIR__ . '/../controllers/DashboardTallerController.php';
 require_once __DIR__ . '/../controllers/OrdenesTallerController.php';
+require_once __DIR__ . '/../controllers/CambioPasswordTemporalTallerController.php';
+require_once __DIR__ . '/../controllers/CorreosSucursalTallerController.php';
+$traitReparacion = __DIR__ . '/../models/UsaConexionTallerReparacion.php';
+if (file_exists($traitReparacion)) {
+    require_once $traitReparacion;
+}
+foreach (glob(__DIR__ . '/../models/*.php') ?: [] as $modeloArchivo) {
+    require_once $modeloArchivo;
+}
+foreach (glob(__DIR__ . '/../services/*.php') ?: [] as $servicioArchivo) {
+    require_once $servicioArchivo;
+}
+require_once __DIR__ . '/../controllers/AlmacenesTallerController.php';
+require_once __DIR__ . '/../controllers/InventarioTallerController.php';
 
 use Giros\ReparacionComputadoras\Controllers\AutogestionTallerController;
 use Giros\ReparacionComputadoras\Controllers\ClienteTallerController;
 use Giros\ReparacionComputadoras\Controllers\DashboardTallerController;
+use Giros\ReparacionComputadoras\Controllers\AlmacenesTallerController;
+use Giros\ReparacionComputadoras\Controllers\InventarioTallerController;
+use Giros\ReparacionComputadoras\Controllers\CorreosSucursalTallerController;
+use Giros\ReparacionComputadoras\Controllers\CambioPasswordTemporalTallerController;
 use Giros\ReparacionComputadoras\Controllers\OrdenesTallerController;
 use Giros\ReparacionComputadoras\Controllers\LoginTallerController;
 use Giros\ReparacionComputadoras\Controllers\PublicaTallerController;
@@ -37,8 +55,36 @@ Route::middleware('web')->prefix('giros/reparacion-computadoras')->group(functio
             ->name('taller.computadoras.ordenes.ver');
         Route::post('/ordenes/{folio}/actualizar', [OrdenesTallerController::class, 'actualizar'])
             ->name('taller.computadoras.ordenes.actualizar');
+        Route::get('/correos-sucursales', [CorreosSucursalTallerController::class, 'index'])
+            ->name('taller.computadoras.correos');
+        Route::post('/correos-sucursales/{usuarioId}', [CorreosSucursalTallerController::class, 'actualizar'])
+            ->name('taller.computadoras.correos.actualizar');
+        Route::get('/inventario', [InventarioTallerController::class, 'index'])
+            ->name('taller.computadoras.inventario');
+        Route::get('/inventario/sucursales', [InventarioTallerController::class, 'index'])
+            ->defaults('seccion', 'sucursales')
+            ->name('taller.computadoras.inventario.sucursales');
+        Route::get('/inventario/entradas', [InventarioTallerController::class, 'index'])
+            ->defaults('seccion', 'entradas')
+            ->name('taller.computadoras.inventario.entradas');
+        Route::get('/inventario/movimientos', [InventarioTallerController::class, 'index'])
+            ->defaults('seccion', 'movimientos')
+            ->name('taller.computadoras.inventario.movimientos');
+        Route::get('/inventario/salidas-ajustes', [InventarioTallerController::class, 'index'])
+            ->defaults('seccion', 'salidas_ajustes')
+            ->name('taller.computadoras.inventario.salidas_ajustes');
+        Route::get('/inventario/traspasos', [InventarioTallerController::class, 'index'])
+            ->defaults('seccion', 'traspasos')
+            ->name('taller.computadoras.inventario.traspasos');
+        Route::get('/inventario/existencias', [InventarioTallerController::class, 'index'])
+            ->defaults('seccion', 'existencias')
+            ->name('taller.computadoras.inventario.existencias');
         Route::post('/logout', [LoginTallerController::class, 'logout'])
             ->name('taller.computadoras.logout');
+        Route::get('/cambiar-password-temporal', [CambioPasswordTemporalTallerController::class, 'show'])
+            ->name('taller.computadoras.password.temporal');
+        Route::post('/cambiar-password-temporal', [CambioPasswordTemporalTallerController::class, 'update'])
+            ->name('taller.computadoras.password.temporal.guardar');
     });
 });
 
@@ -93,3 +139,5 @@ Route::middleware(['web', AutenticadoTaller::class])->prefix('giros/reparacion-c
     Route::delete('/autogestion/promociones/{indice}', [AutogestionTallerController::class, 'eliminarPromocion'])
         ->name('taller.computadoras.autogestion.promociones.destroy');
 });
+
+require_once __DIR__ . '/inventario.php';

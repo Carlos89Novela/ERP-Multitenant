@@ -54,21 +54,61 @@
                 </div>
             </div>
 
-            <nav class="space-y-1 text-sm">
+                        <nav class="space-y-1.5 text-sm">
                 <a href="{{ route('taller.computadoras.dashboard') }}" class="block px-3 py-2 rounded-lg font-medium" style="background-color: var(--taller-primary); color: #fff;">
                     Dashboard
                 </a>
-                                @if(in_array(mb_strtolower((string) ($usuario->rol_empresa ?? '')), ['propietario', 'gerente', 'subgerente', 'admin', 'administrador'], true))
+
+                @if(in_array(mb_strtolower((string) ($usuario->rol_empresa ?? '')), ['propietario', 'gerente', 'subgerente', 'admin', 'administrador'], true))
                     <a href="{{ route('taller.computadoras.ordenes') }}" class="block px-3 py-2 rounded-lg hover:opacity-90" style="background-color: var(--taller-surface);">
                         Órdenes solicitadas
                     </a>
+
+                    <details class="group rounded-lg overflow-hidden" style="background-color: var(--taller-surface);">
+                        <summary class="flex items-center justify-between px-3 py-2 cursor-pointer select-none list-none hover:opacity-90">
+                            <span>Inventario</span>
+                            <span class="text-xs transition-transform group-open:rotate-180" style="color: var(--taller-muted);">▾</span>
+                        </summary>
+                        <div class="px-2 pb-2 pt-1 space-y-1 border-t text-xs" style="border-color: var(--taller-border);">
+                            <a href="{{ route('taller.computadoras.inventario') }}" class="block px-2.5 py-1.5 rounded hover:bg-white/5">
+                                Panel general
+                            </a>
+                            <a href="{{ route('taller.computadoras.inventario.sucursales') }}" class="block px-2.5 py-1.5 rounded hover:bg-white/5">
+                                Sucursales y almacenes
+                            </a>
+                            <a href="{{ route('taller.computadoras.inventario.entradas') }}" class="block px-2.5 py-1.5 rounded hover:bg-white/5">
+                                Entradas y catálogo
+                            </a>
+                            <a href="{{ route('taller.computadoras.inventario.movimientos') }}" class="block px-2.5 py-1.5 rounded hover:bg-white/5">
+                                Salidas, consumos y traspasos
+                            </a>
+                            <a href="{{ route('taller.computadoras.inventario.existencias') }}" class="block px-2.5 py-1.5 rounded hover:bg-white/5">
+                                Existencias y Kardex
+                            </a>
+                        </div>
+                    </details>
                 @endif
-                <a href="{{ route('taller.computadoras.autogestion', ['ambito' => 'publica']) }}" class="block px-3 py-2 rounded-lg hover:opacity-90" style="background-color: var(--taller-surface);">
-                    Autogestión página pública
-                </a>
-                <a href="{{ route('taller.computadoras.autogestion', ['ambito' => 'internas']) }}" class="block px-3 py-2 rounded-lg hover:opacity-90" style="background-color: var(--taller-surface);">
-                    Autogestión páginas internas
-                </a>
+
+                <details class="group rounded-lg overflow-hidden" style="background-color: var(--taller-surface);">
+                    <summary class="flex items-center justify-between px-3 py-2 cursor-pointer select-none list-none hover:opacity-90">
+                        <span>Autogestión</span>
+                        <span class="text-xs transition-transform group-open:rotate-180" style="color: var(--taller-muted);">▾</span>
+                    </summary>
+                    <div class="px-2 pb-2 pt-1 space-y-1 border-t text-xs" style="border-color: var(--taller-border);">
+                        <a href="{{ route('taller.computadoras.autogestion', ['ambito' => 'publica']) }}" class="block px-2.5 py-1.5 rounded hover:bg-white/5">
+                            Página pública
+                        </a>
+                        <a href="{{ route('taller.computadoras.autogestion', ['ambito' => 'internas']) }}" class="block px-2.5 py-1.5 rounded hover:bg-white/5">
+                            Páginas internas
+                        </a>
+                    </div>
+                </details>
+
+                                @if(mb_strtolower((string) ($usuario->rol_empresa ?? '')) === 'propietario')
+                    <a href="{{ route('taller.computadoras.correos') }}" class="block px-3 py-2 rounded-lg hover:opacity-90" style="background-color: var(--taller-surface);">
+                        Correos de sucursales
+                    </a>
+                @endif
                 <a href="{{ route('taller.computadoras.publica') }}" target="_blank" class="block px-3 py-2 rounded-lg hover:opacity-90" style="background-color: var(--taller-surface);">
                     Ver página pública
                 </a>

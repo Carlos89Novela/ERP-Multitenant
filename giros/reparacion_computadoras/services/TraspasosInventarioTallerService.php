@@ -5,6 +5,7 @@ namespace Giros\ReparacionComputadoras\Services;
 use Giros\ReparacionComputadoras\Models\AlmacenTaller;
 use Giros\ReparacionComputadoras\Models\ExistenciaAlmacenTaller;
 use Giros\ReparacionComputadoras\Models\MovimientoInventarioTaller;
+use Giros\ReparacionComputadoras\Models\NotificacionTraspasoTaller;
 use Giros\ReparacionComputadoras\Models\ProductoTaller;
 use Giros\ReparacionComputadoras\Models\TransferenciaInventarioTaller;
 use Giros\ReparacionComputadoras\Models\TransferenciaInventarioTallerDetalle;
@@ -16,25 +17,37 @@ use Illuminate\Validation\ValidationException;
 
 class TraspasosInventarioTallerService
 {
+    public const ESTADO_PARCIAL_PENDIENTE = 'parcial_pendiente';
+
     public function __construct(
         private GestionAlmacenesTallerService $almacenesService
     ) {}
 
-    /**
-     * Solicita/registra una requisición de traspaso entre dos almacenes distintos.
-     *
-     * @param  array{
-     *     motivo?: mixed,
-     *     lineas?: mixed
-     * }  $datos
-     */
+    private function crearNotificacion(
+        int $transferenciaId,
+        int $almacenDestinatarioId,
+        string $evento,
+        string $titulo,
+        string $mensaje
+    ): void {
+        NotificacionTraspasoTaller::query()->create([
+            'empresa_id' => 1,
+            'transferencia_id' => $transferenciaId,
+            'almacen_destinatario_id' => $almacenDestinatarioId,
+            'evento' => $evento,
+            'titulo' => $titulo,
+            'mensaje' => $mensaje,
+            'leida' => false,
+        ]);
+    }
+
     public function solicitarTraspaso(
         AlmacenTaller $origen,
         AlmacenTaller $destino,
         ?UsuarioTaller $usuario,
         array $datos
     ): TransferenciaInventarioTaller {
-        ContextoPropietarioTaller::validarPropietario($usuario);
+        ContextoPropietarioTaller::validarOperadorInventario($usuario);
 
         $normalizados = $this->normalizarSolicitud($datos);
         $this->validarSolicitud($origen, $destino, $normalizados);
@@ -108,6 +121,14 @@ class TraspasosInventarioTallerService
 
             $transferencia->update(['costo_total' => $costoTotal]);
 
+            $this->crearNotificacion(
+                $transferencia->id,
+                $origenBloqueado->id,
+                'solicitud_traspaso',
+                "Nueva solicitud de traspaso {$transferencia->folio}",
+                "{$destinoBloqueado->nombre} solicita traspaso desde {$origenBloqueado->nombre}. Motivo: {$transferencia->motivo}"
+            );
+
             /** @var TransferenciaInventarioTaller $actualizada */
             $actualizada = $transferencia->fresh(['almacenOrigen', 'almacenDestino', 'detalles.producto']) ?? $transferencia;
 
@@ -115,20 +136,12 @@ class TraspasosInventarioTallerService
         }, 3);
     }
 
-    /**
-     * Despacha una transferencia solicitada hacia el almacén virtual de traspaso/tránsito.
-     *
-     * @param  array{
-     *     observaciones?: mixed,
-     *     lineas?: mixed
-     * }  $datos
-     */
     public function despacharATransito(
         TransferenciaInventarioTaller $transferencia,
         ?UsuarioTaller $usuario,
         array $datos = []
     ): TransferenciaInventarioTaller {
-        ContextoPropietarioTaller::validarPropietario($usuario);
+        ContextoPropietarioTaller::validarOperadorInventario($usuario);
 
         if ($transferencia->estado !== TransferenciaInventarioTaller::ESTADO_SOLICITADA) {
             throw ValidationException::withMessages([
@@ -171,6 +184,8 @@ class TraspasosInventarioTallerService
 
             /** @var AlmacenTaller $origen */
             $origen = AlmacenTaller::query()->with('sucursal')->lockForUpdate()->findOrFail($transfBloqueada->almacen_origen_id);
+            /** @var AlmacenTaller $destino */
+            $destino = AlmacenTaller::query()->with('sucursal')->lockForUpdate()->findOrFail($transfBloqueada->almacen_destino_id);
             $transito = $this->almacenesService->asegurarAlmacenTransito();
             /** @var AlmacenTaller $transitoBloqueado */
             $transitoBloqueado = AlmacenTaller::query()->lockForUpdate()->findOrFail($transito->id);
@@ -181,6 +196,34 @@ class TraspasosInventarioTallerService
             sort($productoIds);
             ProductoTaller::query()->whereIn('id', $productoIds)->lockForUpdate()->get();
 
+                        $rolUsuario = strtolower(trim((string) ($usuario->rol_empresa ?? '')));
+            $esPropGlobal = ($rolUsuario === 'propietario');
+            $sucursalOrigenId = $origen->sucursal_id !== null ? (int) $origen->sucursal_id : null;
+            $sucursalUsuarioId = $usuario?->sucursal_id !== null ? (int) $usuario->sucursal_id : null;
+
+            if (! $esPropGlobal && ($sucursalOrigenId === null || $sucursalUsuarioId !== $sucursalOrigenId)) {
+                throw new AuthorizationException('Solo el gerente/subgerente de la sucursal origen o el propietario pueden despachar este traspaso.');
+            }
+
+            $totalDespachadoGlobal = '0.0000';
+            foreach ($detalles as $detChk) {
+                $cChk = array_key_exists($detChk->id, $despachoPorDetalle)
+                    ? $despachoPorDetalle[$detChk->id]
+                    : (string) $detChk->cantidad_solicitada;
+                if (bccomp($cChk, '0.0000', 4) === -1) {
+                    throw ValidationException::withMessages([
+                        'lineas' => "La cantidad a despachar para {$detChk->producto->nombre} no puede ser negativa.",
+                    ]);
+                }
+                $totalDespachadoGlobal = bcadd($totalDespachadoGlobal, $cChk, 4);
+            }
+
+            if (bccomp($totalDespachadoGlobal, '0.0000', 4) !== 1) {
+                throw ValidationException::withMessages([
+                    'lineas' => 'Debes despachar al menos una cantidad mayor a cero en alguno de los productos.',
+                ]);
+            }
+
             $ahora = now();
             $grupoId = $transfBloqueada->grupo_id;
             $costoTotal = '0.0000';
@@ -190,10 +233,14 @@ class TraspasosInventarioTallerService
                     ? $despachoPorDetalle[$detalle->id]
                     : (string) $detalle->cantidad_solicitada;
 
-                if ($cantidadDespacho === '' || bccomp($cantidadDespacho, '0.0000', 4) !== 1) {
-                    throw ValidationException::withMessages([
-                        'lineas' => "La cantidad a despachar para {$detalle->producto->nombre} debe ser mayor a cero.",
+                if (bccomp($cantidadDespacho, '0.0000', 4) === 0) {
+                    $detalle->update([
+                        'cantidad' => '0.0000',
+                        'cantidad_despachada' => '0.0000',
+                        'costo_unitario' => '0.0000',
+                        'subtotal' => '0.0000',
                     ]);
+                    continue;
                 }
 
                 /** @var ExistenciaAlmacenTaller|null $existenciaOrigen */
@@ -224,7 +271,6 @@ class TraspasosInventarioTallerService
                     'subtotal' => $subtotal,
                 ]);
 
-                // 1. Salida en almacén origen
                 $cantOrigenAnt = (string) $existenciaOrigen->cantidad;
                 $cantOrigenNueva = bcsub($cantOrigenAnt, $cantidadDespacho, 4);
                 $existenciaOrigen->update(['cantidad' => $cantOrigenNueva]);
@@ -247,7 +293,6 @@ class TraspasosInventarioTallerService
                     'ocurrido_at' => $ahora,
                 ]);
 
-                // 2. Ingreso a almacén virtual de traspaso/tránsito
                 /** @var ExistenciaAlmacenTaller|null $existenciaTransito */
                 $existenciaTransito = ExistenciaAlmacenTaller::query()
                     ->where('almacen_id', $transitoBloqueado->id)
@@ -302,6 +347,14 @@ class TraspasosInventarioTallerService
                 'observaciones_despacho' => $observaciones,
             ]);
 
+            $this->crearNotificacion(
+                $transfBloqueada->id,
+                $destino->id,
+                'traspaso_en_transito',
+                "Traspaso {$transfBloqueada->folio} aceptado y en tránsito",
+                "{$origen->nombre} despachó el traspaso hacia almacén de tránsito. Verifica físicamente al recibir en {$destino->nombre}."
+            );
+
             /** @var TransferenciaInventarioTaller $actualizada */
             $actualizada = $transfBloqueada->fresh([
                 'almacenOrigen',
@@ -314,25 +367,19 @@ class TraspasosInventarioTallerService
         }, 3);
     }
 
-    /**
-     * Recibe una transferencia en tránsito en el almacén de destino,
-     * liquidando el almacén de traspaso y recalculando costo promedio en destino.
-     *
-     * @param  array{
-     *     observaciones?: mixed,
-     *     lineas?: mixed
-     * }  $datos
-     */
     public function recibirEnDestino(
         TransferenciaInventarioTaller $transferencia,
         ?UsuarioTaller $usuario,
         array $datos = []
     ): TransferenciaInventarioTaller {
-        ContextoPropietarioTaller::validarPropietario($usuario);
+        ContextoPropietarioTaller::validarOperadorInventario($usuario);
 
-        if ($transferencia->estado !== TransferenciaInventarioTaller::ESTADO_EN_TRANSITO) {
+        if (! in_array($transferencia->estado, [
+            TransferenciaInventarioTaller::ESTADO_EN_TRANSITO,
+            self::ESTADO_PARCIAL_PENDIENTE,
+        ], true)) {
             throw ValidationException::withMessages([
-                'transferencia' => 'La transferencia no se encuentra en tránsito.',
+                'transferencia' => 'La transferencia no tiene mercancía pendiente de recepción.',
             ]);
         }
 
@@ -363,12 +410,17 @@ class TraspasosInventarioTallerService
             /** @var TransferenciaInventarioTaller $transfBloqueada */
             $transfBloqueada = TransferenciaInventarioTaller::query()->lockForUpdate()->findOrFail($transferencia->id);
 
-            if ($transfBloqueada->estado !== TransferenciaInventarioTaller::ESTADO_EN_TRANSITO) {
+            if (! in_array($transfBloqueada->estado, [
+                TransferenciaInventarioTaller::ESTADO_EN_TRANSITO,
+                self::ESTADO_PARCIAL_PENDIENTE,
+            ], true)) {
                 throw ValidationException::withMessages([
                     'transferencia' => 'La transferencia ya no está pendiente de recepción.',
                 ]);
             }
 
+            /** @var AlmacenTaller $origen */
+            $origen = AlmacenTaller::query()->with('sucursal')->lockForUpdate()->findOrFail($transfBloqueada->almacen_origen_id);
             /** @var AlmacenTaller $destino */
             $destino = AlmacenTaller::query()->with('sucursal')->lockForUpdate()->findOrFail($transfBloqueada->almacen_destino_id);
             if (! $destino->activo || ! $destino->permite_existencias) {
@@ -391,107 +443,161 @@ class TraspasosInventarioTallerService
 
             $ahora = now();
             $grupoId = $transfBloqueada->grupo_id;
+            $huboRecepcionEnEstaOperacion = false;
+            $resumenFaltantes = [];
+            $resumenRecibidos = [];
+            $hayPendientesRestantes = false;
 
             foreach ($detalles as $detalle) {
                 $cantidadDespachada = (string) $detalle->cantidad_despachada;
-                $cantidadRecibida = array_key_exists($detalle->id, $recepcionPorDetalle)
-                    ? $recepcionPorDetalle[$detalle->id]
-                    : $cantidadDespachada;
+                $cantidadRecibidaPrevia = (string) $detalle->cantidad_recibida;
+                $pendienteAntes = bcsub($cantidadDespachada, $cantidadRecibidaPrevia, 4);
+                if (bccomp($pendienteAntes, '0.0000', 4) === -1) {
+                    $pendienteAntes = '0.0000';
+                }
 
-                if ($cantidadRecibida === '' || bccomp($cantidadRecibida, '0.0000', 4) === -1) {
+                $cantidadRecibidaAhora = array_key_exists($detalle->id, $recepcionPorDetalle)
+                    ? $recepcionPorDetalle[$detalle->id]
+                    : $pendienteAntes;
+
+                if ($cantidadRecibidaAhora === '' || bccomp($cantidadRecibidaAhora, '0.0000', 4) === -1) {
                     throw ValidationException::withMessages([
                         'lineas' => "La cantidad recibida para {$detalle->producto->nombre} no es válida.",
                     ]);
                 }
 
-                if (bccomp($cantidadRecibida, $cantidadDespachada, 4) === 1) {
+                if (bccomp($cantidadRecibidaAhora, $pendienteAntes, 4) === 1) {
                     throw ValidationException::withMessages([
-                        'lineas' => "La cantidad recibida ({$cantidadRecibida}) no puede superar lo despachado ({$cantidadDespachada}).",
+                        'lineas' => "No puedes recibir ({$cantidadRecibidaAhora}) más de lo pendiente ({$pendienteAntes}) para {$detalle->producto->nombre}.",
                     ]);
                 }
 
-                $costoUnitario = (string) $detalle->costo_unitario;
-                $detalle->update(['cantidad_recibida' => $cantidadRecibida]);
+                $nuevaCantidadRecibidaTotal = bcadd($cantidadRecibidaPrevia, $cantidadRecibidaAhora, 4);
+                $pendienteDespues = bcsub($cantidadDespachada, $nuevaCantidadRecibidaTotal, 4);
+                if (bccomp($pendienteDespues, '0.0000', 4) === -1) {
+                    $pendienteDespues = '0.0000';
+                }
 
-                // 1. Descargar del almacén virtual de traspaso/tránsito
-                if ($transito !== null) {
-                    /** @var ExistenciaAlmacenTaller|null $existenciaTrns */
-                    $existenciaTrns = ExistenciaAlmacenTaller::query()
-                        ->where('almacen_id', $transito->id)
+                $costoUnitario = (string) $detalle->costo_unitario;
+                $detalle->update(['cantidad_recibida' => $nuevaCantidadRecibidaTotal]);
+
+                if (bccomp($cantidadRecibidaAhora, '0.0000', 4) === 1) {
+                    $huboRecepcionEnEstaOperacion = true;
+                    $resumenRecibidos[] = "{$detalle->producto->nombre}: +{$cantidadRecibidaAhora} (total {$nuevaCantidadRecibidaTotal}/{$cantidadDespachada})";
+
+                    if ($transito !== null) {
+                        /** @var ExistenciaAlmacenTaller|null $existenciaTrns */
+                        $existenciaTrns = ExistenciaAlmacenTaller::query()
+                            ->where('almacen_id', $transito->id)
+                            ->where('producto_id', $detalle->producto_id)
+                            ->lockForUpdate()
+                            ->first();
+
+                        if ($existenciaTrns !== null) {
+                            $cantTrnsAnt = (string) $existenciaTrns->cantidad;
+                            $cantTrnsNueva = bcsub($cantTrnsAnt, $cantidadRecibidaAhora, 4);
+                            if (bccomp($cantTrnsNueva, '0.0000', 4) === -1) {
+                                $cantTrnsNueva = '0.0000';
+                            }
+                            $existenciaTrns->update(['cantidad' => $cantTrnsNueva]);
+                        }
+                    }
+
+                    /** @var ExistenciaAlmacenTaller|null $existenciaDestino */
+                    $existenciaDestino = ExistenciaAlmacenTaller::query()
+                        ->where('almacen_id', $destino->id)
                         ->where('producto_id', $detalle->producto_id)
                         ->lockForUpdate()
                         ->first();
 
-                    if ($existenciaTrns !== null) {
-                        $cantTrnsAnt = (string) $existenciaTrns->cantidad;
-                        $cantTrnsNueva = bcsub($cantTrnsAnt, $cantidadDespachada, 4);
-                        if (bccomp($cantTrnsNueva, '0.0000', 4) === -1) {
-                            $cantTrnsNueva = '0.0000';
-                        }
-                        $existenciaTrns->update(['cantidad' => $cantTrnsNueva]);
+                    $cantDestAnt = $existenciaDestino !== null ? (string) $existenciaDestino->cantidad : '0.0000';
+                    $costoDestAnt = $existenciaDestino !== null ? (string) $existenciaDestino->costo_promedio : '0.0000';
+
+                    $cantDestNueva = bcadd($cantDestAnt, $cantidadRecibidaAhora, 4);
+                    $valorAnt = bcmul($cantDestAnt, $costoDestAnt, 8);
+                    $valorIng = bcmul($cantidadRecibidaAhora, $costoUnitario, 8);
+                    $valorTot = bcadd($valorAnt, $valorIng, 8);
+                    $costoDestNuevo = bccomp($cantDestNueva, '0.0000', 4) === 1
+                        ? bcdiv($valorTot, $cantDestNueva, 4)
+                        : $costoDestAnt;
+
+                    if ($existenciaDestino === null) {
+                        ExistenciaAlmacenTaller::query()->create([
+                            'empresa_id' => 1,
+                            'almacen_id' => $destino->id,
+                            'producto_id' => $detalle->producto_id,
+                            'cantidad' => $cantDestNueva,
+                            'cantidad_reservada' => '0.0000',
+                            'costo_promedio' => $costoDestNuevo,
+                        ]);
+                    } else {
+                        $existenciaDestino->update([
+                            'cantidad' => $cantDestNueva,
+                            'costo_promedio' => $costoDestNuevo,
+                        ]);
                     }
-                }
 
-                // 2. Ingresar al almacén destino y recalcular costo promedio ponderado
-                /** @var ExistenciaAlmacenTaller|null $existenciaDestino */
-                $existenciaDestino = ExistenciaAlmacenTaller::query()
-                    ->where('almacen_id', $destino->id)
-                    ->where('producto_id', $detalle->producto_id)
-                    ->lockForUpdate()
-                    ->first();
-
-                $cantDestAnt = $existenciaDestino !== null ? (string) $existenciaDestino->cantidad : '0.0000';
-                $costoDestAnt = $existenciaDestino !== null ? (string) $existenciaDestino->costo_promedio : '0.0000';
-
-                $cantDestNueva = bcadd($cantDestAnt, $cantidadRecibida, 4);
-                $valorAnt = bcmul($cantDestAnt, $costoDestAnt, 8);
-                $valorIng = bcmul($cantidadRecibida, $costoUnitario, 8);
-                $valorTot = bcadd($valorAnt, $valorIng, 8);
-                $costoDestNuevo = bccomp($cantDestNueva, '0.0000', 4) === 1
-                    ? bcdiv($valorTot, $cantDestNueva, 4)
-                    : $costoDestAnt;
-
-                if ($existenciaDestino === null) {
-                    ExistenciaAlmacenTaller::query()->create([
+                    MovimientoInventarioTaller::query()->create([
                         'empresa_id' => 1,
                         'almacen_id' => $destino->id,
                         'producto_id' => $detalle->producto_id,
-                        'cantidad' => $cantDestNueva,
-                        'cantidad_reservada' => '0.0000',
-                        'costo_promedio' => $costoDestNuevo,
-                    ]);
-                } else {
-                    $existenciaDestino->update([
-                        'cantidad' => $cantDestNueva,
-                        'costo_promedio' => $costoDestNuevo,
+                        'grupo_id' => $grupoId,
+                        'folio' => 'MOV-' . $ahora->format('YmdHisv') . '-' . Str::upper(Str::random(6)),
+                        'tipo' => MovimientoInventarioTaller::TIPO_TRANSFERENCIA_ENTRADA,
+                        'cantidad' => $cantidadRecibidaAhora,
+                        'existencia_anterior' => $cantDestAnt,
+                        'existencia_nueva' => $cantDestNueva,
+                        'costo_unitario' => $costoUnitario,
+                        'referencia_tipo' => TransferenciaInventarioTaller::class,
+                        'referencia_id' => $transfBloqueada->id,
+                        'motivo' => "Recepción en traspaso ({$transfBloqueada->folio}): {$transfBloqueada->motivo}",
+                        'usuario_id' => $usuario?->id,
+                        'ocurrido_at' => $ahora,
                     ]);
                 }
 
-                MovimientoInventarioTaller::query()->create([
-                    'empresa_id' => 1,
-                    'almacen_id' => $destino->id,
-                    'producto_id' => $detalle->producto_id,
-                    'grupo_id' => $grupoId,
-                    'folio' => 'MOV-' . $ahora->format('YmdHisv') . '-' . Str::upper(Str::random(6)),
-                    'tipo' => MovimientoInventarioTaller::TIPO_TRANSFERENCIA_ENTRADA,
-                    'cantidad' => $cantidadRecibida,
-                    'existencia_anterior' => $cantDestAnt,
-                    'existencia_nueva' => $cantDestNueva,
-                    'costo_unitario' => $costoUnitario,
-                    'referencia_tipo' => TransferenciaInventarioTaller::class,
-                    'referencia_id' => $transfBloqueada->id,
-                    'motivo' => "Recepción de traspaso ({$transfBloqueada->folio}): {$transfBloqueada->motivo}",
-                    'usuario_id' => $usuario?->id,
-                    'ocurrido_at' => $ahora,
+                if (bccomp($pendienteDespues, '0.0000', 4) === 1) {
+                    $hayPendientesRestantes = true;
+                    $resumenFaltantes[] = "{$detalle->producto->nombre}: faltan {$pendienteDespues}";
+                }
+            }
+
+            if (! $huboRecepcionEnEstaOperacion && ! $hayPendientesRestantes) {
+                throw ValidationException::withMessages([
+                    'lineas' => 'Debes indicar una cantidad recibida mayor a cero.',
                 ]);
             }
 
+            $estadoFinal = $hayPendientesRestantes
+                ? self::ESTADO_PARCIAL_PENDIENTE
+                : TransferenciaInventarioTaller::ESTADO_COMPLETADA;
+
             $transfBloqueada->update([
-                'estado' => TransferenciaInventarioTaller::ESTADO_COMPLETADA,
+                'estado' => $estadoFinal,
                 'recibido_por_id' => $usuario?->id,
                 'recibido_at' => $ahora,
                 'observaciones_recepcion' => $observaciones,
             ]);
+
+            if ($hayPendientesRestantes) {
+                $textoRec = empty($resumenRecibidos) ? 'Sin ingreso en este paso.' : implode(' | ', $resumenRecibidos);
+                $textoFalt = implode(' | ', $resumenFaltantes);
+                $this->crearNotificacion(
+                    $transfBloqueada->id,
+                    $origen->id,
+                    'recepcion_parcial_pendiente',
+                    "Recepción parcial en {$transfBloqueada->folio} (faltante pendiente)",
+                    "{$destino->nombre} registró recepción parcial ({$textoRec}). Queda pendiente: {$textoFalt}. El traspaso sigue abierto hasta concluir o cancelar el faltante."
+                );
+            } else {
+                $this->crearNotificacion(
+                    $transfBloqueada->id,
+                    $origen->id,
+                    'traspaso_completado',
+                    "Traspaso {$transfBloqueada->folio} completado y liberado",
+                    "{$destino->nombre} concluyó la recepción del traspaso {$transfBloqueada->folio}."
+                );
+            }
 
             /** @var TransferenciaInventarioTaller $actualizada */
             $actualizada = $transfBloqueada->fresh([
@@ -505,15 +611,164 @@ class TraspasosInventarioTallerService
         }, 3);
     }
 
-    /**
-     * Cancela/rechaza una transferencia mientras aún está en estado solicitada.
-     */
+    public function cancelarDetalleFaltante(
+        TransferenciaInventarioTaller $transferencia,
+        int $detalleId,
+        ?UsuarioTaller $usuario,
+        string $motivo = 'Cancelado por falta de existencia'
+    ): TransferenciaInventarioTaller {
+        ContextoPropietarioTaller::validarOperadorInventario($usuario);
+
+        if (! in_array($transferencia->estado, [
+            TransferenciaInventarioTaller::ESTADO_EN_TRANSITO,
+            self::ESTADO_PARCIAL_PENDIENTE,
+        ], true)) {
+            throw ValidationException::withMessages([
+                'transferencia' => 'Solo se pueden cancelar faltantes en transferencias en tránsito o parciales.',
+            ]);
+        }
+
+        $motivoLimpio = trim($motivo) !== '' ? trim($motivo) : 'Cancelado por falta de existencia';
+
+        return DB::connection('taller_rep_db')->transaction(function () use (
+            $transferencia,
+            $detalleId,
+            $usuario,
+            $motivoLimpio
+        ): TransferenciaInventarioTaller {
+            /** @var TransferenciaInventarioTaller $transfBloqueada */
+            $transfBloqueada = TransferenciaInventarioTaller::query()->lockForUpdate()->findOrFail($transferencia->id);
+            /** @var AlmacenTaller $origen */
+            $origen = AlmacenTaller::query()->lockForUpdate()->findOrFail($transfBloqueada->almacen_origen_id);
+            /** @var AlmacenTaller $destino */
+            $destino = AlmacenTaller::query()->lockForUpdate()->findOrFail($transfBloqueada->almacen_destino_id);
+            $transito = $transfBloqueada->almacen_transito_id !== null
+                ? AlmacenTaller::query()->lockForUpdate()->find($transfBloqueada->almacen_transito_id)
+                : null;
+
+            /** @var TransferenciaInventarioTallerDetalle $detalle */
+            $detalle = $transfBloqueada->detalles()->with('producto')->lockForUpdate()->findOrFail($detalleId);
+
+            $faltante = bcsub((string) $detalle->cantidad_despachada, (string) $detalle->cantidad_recibida, 4);
+            if (bccomp($faltante, '0.0000', 4) !== 1) {
+                throw ValidationException::withMessages([
+                    'detalle' => "El producto {$detalle->producto->nombre} no tiene faltante pendiente por cancelar.",
+                ]);
+            }
+
+            $ahora = now();
+            $grupoId = $transfBloqueada->grupo_id;
+            $costoUnitario = (string) $detalle->costo_unitario;
+
+            $nuevoDespachado = (string) $detalle->cantidad_recibida;
+            $detalle->update([
+                'cantidad_despachada' => $nuevoDespachado,
+                'cantidad' => $nuevoDespachado,
+                'subtotal' => bcmul($nuevoDespachado, $costoUnitario, 4),
+            ]);
+
+            if ($transito !== null) {
+                /** @var ExistenciaAlmacenTaller|null $existenciaTrns */
+                $existenciaTrns = ExistenciaAlmacenTaller::query()
+                    ->where('almacen_id', $transito->id)
+                    ->where('producto_id', $detalle->producto_id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($existenciaTrns !== null) {
+                    $cantTrnsAnt = (string) $existenciaTrns->cantidad;
+                    $cantTrnsNueva = bcsub($cantTrnsAnt, $faltante, 4);
+                    if (bccomp($cantTrnsNueva, '0.0000', 4) === -1) {
+                        $cantTrnsNueva = '0.0000';
+                    }
+                    $existenciaTrns->update(['cantidad' => $cantTrnsNueva]);
+                }
+            }
+
+            /** @var ExistenciaAlmacenTaller|null $existenciaOrigen */
+            $existenciaOrigen = ExistenciaAlmacenTaller::query()
+                ->where('almacen_id', $origen->id)
+                ->where('producto_id', $detalle->producto_id)
+                ->lockForUpdate()
+                ->first();
+
+            $cantOrigAnt = $existenciaOrigen !== null ? (string) $existenciaOrigen->cantidad : '0.0000';
+            $cantOrigNueva = bcadd($cantOrigAnt, $faltante, 4);
+            if ($existenciaOrigen === null) {
+                ExistenciaAlmacenTaller::query()->create([
+                    'empresa_id' => 1,
+                    'almacen_id' => $origen->id,
+                    'producto_id' => $detalle->producto_id,
+                    'cantidad' => $cantOrigNueva,
+                    'cantidad_reservada' => '0.0000',
+                    'costo_promedio' => $costoUnitario,
+                ]);
+            } else {
+                $existenciaOrigen->update(['cantidad' => $cantOrigNueva]);
+            }
+
+            MovimientoInventarioTaller::query()->create([
+                'empresa_id' => 1,
+                'almacen_id' => $origen->id,
+                'producto_id' => $detalle->producto_id,
+                'grupo_id' => $grupoId,
+                'folio' => 'MOV-' . $ahora->format('YmdHisv') . '-' . Str::upper(Str::random(6)),
+                'tipo' => MovimientoInventarioTaller::TIPO_TRANSFERENCIA_ENTRADA,
+                'cantidad' => $faltante,
+                'existencia_anterior' => $cantOrigAnt,
+                'existencia_nueva' => $cantOrigNueva,
+                'costo_unitario' => $costoUnitario,
+                'referencia_tipo' => TransferenciaInventarioTaller::class,
+                'referencia_id' => $transfBloqueada->id,
+                'motivo' => "Retorno de faltante cancelado ({$transfBloqueada->folio}): {$motivoLimpio}",
+                'usuario_id' => $usuario?->id,
+                'ocurrido_at' => $ahora,
+            ]);
+
+            $todosDetalles = $transfBloqueada->detalles()->lockForUpdate()->get();
+            $quedanFaltantes = false;
+            foreach ($todosDetalles as $detItem) {
+                if (bccomp((string) $detItem->cantidad_despachada, (string) $detItem->cantidad_recibida, 4) === 1) {
+                    $quedanFaltantes = true;
+                    break;
+                }
+            }
+
+            $estadoFinal = $quedanFaltantes
+                ? self::ESTADO_PARCIAL_PENDIENTE
+                : TransferenciaInventarioTaller::ESTADO_COMPLETADA;
+
+            $transfBloqueada->update([
+                'estado' => $estadoFinal,
+                'observaciones_recepcion' => trim(($transfBloqueada->observaciones_recepcion ? $transfBloqueada->observaciones_recepcion . ' | ' : '') . "Faltante {$detalle->producto->nombre} ({$faltante}) cancelado: {$motivoLimpio}"),
+            ]);
+
+            $this->crearNotificacion(
+                $transfBloqueada->id,
+                $destino->id,
+                'faltante_cancelado',
+                "Faltante cancelado en {$transfBloqueada->folio}: {$detalle->producto->nombre}",
+                "Se canceló el faltante de {$faltante} de {$detalle->producto->nombre} ({$motivoLimpio}) sin cancelar todo el traspaso. Estado actual: {$estadoFinal}."
+            );
+
+            /** @var TransferenciaInventarioTaller $actualizada */
+            $actualizada = $transfBloqueada->fresh([
+                'almacenOrigen',
+                'almacenDestino',
+                'almacenTransito',
+                'detalles.producto',
+            ]) ?? $transfBloqueada;
+
+            return $actualizada;
+        }, 3);
+    }
+
     public function cancelarSolicitud(
         TransferenciaInventarioTaller $transferencia,
         ?UsuarioTaller $usuario,
         string $motivoCancelacion
     ): TransferenciaInventarioTaller {
-        ContextoPropietarioTaller::validarPropietario($usuario);
+        ContextoPropietarioTaller::validarOperadorInventario($usuario);
 
         if ($transferencia->estado !== TransferenciaInventarioTaller::ESTADO_SOLICITADA) {
             throw ValidationException::withMessages([
@@ -539,6 +794,14 @@ class TraspasosInventarioTallerService
                 'despachado_at' => now(),
             ]);
 
+            $this->crearNotificacion(
+                $transfBloqueada->id,
+                (int) $transfBloqueada->almacen_destino_id,
+                'traspaso_cancelado',
+                "Solicitud de traspaso {$transfBloqueada->folio} cancelada",
+                "Motivo: {$motivoLimpio}"
+            );
+
             /** @var TransferenciaInventarioTaller $actualizada */
             $actualizada = $transfBloqueada->fresh(['almacenOrigen', 'almacenDestino', 'detalles.producto']) ?? $transfBloqueada;
 
@@ -546,13 +809,6 @@ class TraspasosInventarioTallerService
         }, 3);
     }
 
-    /**
-     * @param  array<string, mixed>  $datos
-     * @return array{
-     *     motivo: string,
-     *     lineas: list<array{producto_id: int, cantidad: string}>
-     * }
-     */
     private function normalizarSolicitud(array $datos): array
     {
         $motivo = is_string($datos['motivo'] ?? null) ? trim((string) $datos['motivo']) : '';
@@ -578,12 +834,6 @@ class TraspasosInventarioTallerService
         ];
     }
 
-    /**
-     * @param  array{
-     *     motivo: string,
-     *     lineas: list<array{producto_id: int, cantidad: string}>
-     * }  $datos
-     */
     private function validarSolicitud(AlmacenTaller $origen, AlmacenTaller $destino, array $datos): void
     {
         if ($origen->id === $destino->id) {

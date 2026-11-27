@@ -31,7 +31,7 @@ class SalidasYConsumosTallerService
         ?UsuarioTaller $usuario,
         array $datos
     ): ExistenciaAlmacenTaller {
-        ContextoPropietarioTaller::validarPropietario($usuario);
+        ContextoPropietarioTaller::validarOperadorInventario($usuario);
 
         $cantidad = $this->normalizarDecimal($datos['cantidad'] ?? null);
         $motivo = is_string($datos['motivo'] ?? null) ? trim((string) $datos['motivo']) : '';
@@ -132,7 +132,7 @@ class SalidasYConsumosTallerService
         ?UsuarioTaller $usuario,
         array $datos
     ): MovimientoInventarioTaller {
-        ContextoPropietarioTaller::validarPropietario($usuario);
+        ContextoPropietarioTaller::validarOperadorInventario($usuario);
 
         $ordenIdRaw = filter_var($datos['orden_reparacion_id'] ?? null, FILTER_VALIDATE_INT);
         $ordenId = ($ordenIdRaw !== false && (int) $ordenIdRaw > 0) ? (int) $ordenIdRaw : null;

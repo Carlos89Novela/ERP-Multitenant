@@ -3,6 +3,10 @@
 namespace Giros\ReparacionComputadoras\Controllers;
 
 use Giros\ReparacionComputadoras\Models\AlmacenTaller;
+use Giros\ReparacionComputadoras\Models\CategoriaRefaccionTaller;
+use Illuminate\Contracts\View\View as ViewContract;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\View;
 use Giros\ReparacionComputadoras\Models\ProductoTaller;
 use Giros\ReparacionComputadoras\Models\TransferenciaInventarioTaller;
 use Giros\ReparacionComputadoras\Models\UsuarioTaller;
@@ -24,7 +28,7 @@ class InventarioTallerController
         /** @var UsuarioTaller|null $usuario */
         $usuario = $request->attributes->get('usuario_taller');
 
-        return ContextoPropietarioTaller::validarPropietario($usuario);
+        return ContextoPropietarioTaller::validarOperadorInventario($usuario);
     }
 
     public function storeCategoria(Request $request, CatalogoInventarioTallerService $catalogo): RedirectResponse
@@ -229,6 +233,31 @@ class InventarioTallerController
         return back()->with('success', "Traspaso {$actualizada->folio} cancelado.");
     }
 
+
+    public function cancelarDetalleFaltante(
+        Request $request,
+        int $transferenciaId,
+        int $detalleId,
+        TraspasosInventarioTallerService $traspasos
+    ): RedirectResponse {
+        $propietario = $this->propietario($request);
+
+        $datos = $request->validate([
+            'motivo' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        /** @var TransferenciaInventarioTaller $trf */
+        $trf = TransferenciaInventarioTaller::query()->findOrFail($transferenciaId);
+        $actualizada = $traspasos->cancelarDetalleFaltante(
+            $trf,
+            $detalleId,
+            $propietario,
+            (string) ($datos['motivo'] ?? 'Cancelado por falta de existencia')
+        );
+
+        return back()->with('success', "Faltante cancelado en {$actualizada->folio} sin cancelar el traspaso completo.");
+    }
+
     /**
      * Datos consolidados para la vista principal de inventario y consulta entre almacenes.
      *
@@ -264,5 +293,54 @@ class InventarioTallerController
                 ->limit(50)
                 ->get(),
         ];
+    }
+
+    public function index(
+        Request $request,
+        GestionAlmacenesTallerService $almacenesService,
+        ConsultaExistenciasTallerService $consultaService
+    ): ViewContract {
+        $propietario = $this->propietario($request);
+        View::addNamespace('taller_computadoras', base_path('giros/reparacion_computadoras/views'));
+
+        $datos = $this->datosPanel($request, $almacenesService, $consultaService);
+
+        $empresa = DB::connection('mysql')
+            ->table('empresas')
+            ->where('id', $propietario->empresa_id)
+            ->first();
+
+        $template = $empresa
+            ? DB::connection('mysql')
+                ->table('template_configuraciones')
+                ->where('empresa_id', $empresa->id)
+                ->where('activo', true)
+                ->orderByDesc('id')
+                ->first()
+            : null;
+
+        require_once __DIR__ . '/AutogestionTallerController.php';
+        $configInternas = AutogestionTallerController::cargarConfiguracionPorAmbito((int) $propietario->empresa_id, 'internas');
+
+        $seccion = (string) ($request->route('seccion') ?? $request->query('seccion', 'general'));
+        if ($request->routeIs('taller.computadoras.inventario.salidas_ajustes')) {
+            $seccion = 'salidas_ajustes';
+        } elseif ($request->routeIs('taller.computadoras.inventario.traspasos')) {
+            $seccion = 'traspasos';
+        } elseif ($request->routeIs('taller.computadoras.inventario.movimientos')) {
+            $seccion = 'movimientos';
+        }
+        $categorias = CategoriaRefaccionTaller::query()->orderBy('nombre')->get();
+        $productos = ProductoTaller::query()->with('categoria')->orderBy('nombre')->get();
+
+        return view('taller_computadoras::inventario.panel', array_merge($datos, [
+            'usuario' => $propietario,
+            'empresa' => $empresa,
+            'template' => $template,
+            'configInternas' => $configInternas,
+            'seccionActiva' => $seccion,
+            'categorias' => $categorias,
+            'productos' => $productos,
+        ]));
     }
 }

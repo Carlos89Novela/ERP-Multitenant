@@ -32,7 +32,7 @@ class RegistrarEntradaTallerService
         ?UsuarioTaller $usuario,
         array $datos
     ): RecepcionInventarioTaller {
-        ContextoPropietarioTaller::validarPropietario($usuario);
+        ContextoPropietarioTaller::validarOperadorInventario($usuario);
 
         $datosNormalizados = $this->normalizarDatos($datos);
         $this->validar($almacen, $datosNormalizados);

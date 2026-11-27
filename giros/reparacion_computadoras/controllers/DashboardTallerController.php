@@ -53,6 +53,16 @@ class DashboardTallerController extends Controller
             }
         }
 
+        if (! $usuario->esPropietarioGlobal() && $usuario->sucursalAsignadaId() !== null && ! empty($ordenesJson)) {
+            $sucUsuario = (int) $usuario->sucursalAsignadaId();
+            $ordenesJson = array_values(array_filter($ordenesJson, function ($ord) use ($sucUsuario) {
+                if (! array_key_exists('sucursal_id', $ord)) {
+                    return true;
+                }
+                return (int) $ord['sucursal_id'] === $sucUsuario;
+            }));
+        }
+
         if (! empty($ordenesJson)) {
             $abiertas = 0;
             $listas = 0;

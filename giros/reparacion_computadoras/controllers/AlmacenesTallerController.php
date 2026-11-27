@@ -24,24 +24,47 @@ class AlmacenesTallerController
             'es_matriz' => ['nullable', 'boolean'],
         ]);
 
+        $validado['empresa_id'] = (int) ($usuario?->empresa_id ?? 1);
         $resultado = $servicio->crearSucursalConAlmacen($validado);
 
-        return back()->with(
-            'success',
-            "Sucursal {$resultado['sucursal']->nombre} creada con su almacén {$resultado['almacen']->nombre}."
-        );
+        $resumenUsuarios = collect($resultado['usuarios_creados'] ?? [])
+            ->map(fn ($u) => "{$u['rol']}: {$u['email']} (clave: {$u['password_temporal']})")
+            ->implode(' | ');
+
+        return back()
+            ->with('success', "Sucursal {$resultado['sucursal']->nombre} creada con su almacén {$resultado['almacen']->nombre} y usuarios base ({$resumenUsuarios}).")
+            ->with('usuarios_sucursal_creados', $resultado['usuarios_creados'] ?? []);
     }
 
     /**
      * @return array{sucursales: \Illuminate\Database\Eloquent\Collection, almacenes: \Illuminate\Database\Eloquent\Collection}
      */
-    public function catalogosParaVista(GestionAlmacenesTallerService $servicio): array
+    public function catalogosParaVista(GestionAlmacenesTallerService $servicio, ?UsuarioTaller $actor = null): array
     {
         $servicio->asegurarAlmacenTransito();
 
+        $esGlobal = $actor === null || $actor->esPropietarioGlobal();
+        $sucursalId = $actor?->sucursalAsignadaId();
+
+        $sucursalesQuery = SucursalTaller::query()->with('almacenes')->orderByDesc('es_matriz')->orderBy('id');
+        $almacenesQuery = AlmacenTaller::query()->with('sucursal')->orderBy('es_virtual')->orderBy('id');
+
+        if (! $esGlobal) {
+            if ($sucursalId !== null) {
+                $sucursalesQuery->where('id', $sucursalId);
+                $almacenesQuery->where(function ($q) use ($sucursalId): void {
+                    $q->where('sucursal_id', $sucursalId)
+                        ->orWhere('es_virtual', true);
+                });
+            } else {
+                $sucursalesQuery->whereRaw('1 = 0');
+                $almacenesQuery->where('es_virtual', true);
+            }
+        }
+
         return [
-            'sucursales' => SucursalTaller::query()->with('almacenes')->orderByDesc('es_matriz')->orderBy('id')->get(),
-            'almacenes' => AlmacenTaller::query()->with('sucursal')->orderBy('es_virtual')->orderBy('id')->get(),
+            'sucursales' => $sucursalesQuery->get(),
+            'almacenes' => $almacenesQuery->get(),
         ];
     }
 }
