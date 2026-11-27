@@ -1,37 +1,5 @@
 [
     {
-        "id": "ord-demo-1001",
-        "folio": "ORD-2026-1001",
-        "cliente_id": null,
-        "cliente_nombre": "Cliente Mostrador",
-        "cliente_correo": "",
-        "equipo": "Laptop HP Pavilion 15",
-        "tipo_equipo": "Laptop",
-        "serie": "5CD2148X9A",
-        "falla": "No enciende y ventilador hace ruido al intentar arrancar",
-        "estado": "En reparación",
-        "diagnostico": "Limpieza térmica profunda, cambio de pasta y revisión de regulador de carga.",
-        "costo_estimado": 850,
-        "actualizado_en": "2026-11-26 16:38",
-        "historial": [
-            {
-                "estado": "Recepción",
-                "nota": "Equipo recibido en mostrador.",
-                "fecha": "2026-11-24 16:38"
-            },
-            {
-                "estado": "Diagnóstico",
-                "nota": "Revisión térmica y de energía.",
-                "fecha": "2026-11-25 16:38"
-            },
-            {
-                "estado": "En reparación",
-                "nota": "En banco de trabajo.",
-                "fecha": "2026-11-26 16:38"
-            }
-        ]
-    },
-    {
         "id": "ord_qlwahlovnn",
         "folio": "ORD-2026-FDGHJ",
         "cliente_id": "cli_vl392opynu",
@@ -45,13 +13,21 @@
         "estado": "Recepción",
         "diagnostico": "Pendiente de revisión técnica en taller.",
         "costo_estimado": null,
-        "actualizado_en": "2026-11-26 17:40",
+        "actualizado_en": "2026-11-26 22:22",
         "historial": [
             {
                 "estado": "Recepción",
                 "nota": "Orden generada por el cliente. Detalle: Diagnóstico y hardware — La Laptop se encuentra muy lenta me gustaria un diagnostico",
                 "fecha": "2026-11-26 17:40"
+            },
+            {
+                "estado": "Recepción",
+                "nota": "Responsable asignado: Empleado Técnico Prueba (Propietario Prueba)",
+                "fecha": "2026-11-26 22:22"
             }
-        ]
+        ],
+        "asignado_a_id": 4,
+        "asignado_a_nombre": "Empleado Técnico Prueba",
+        "asignado_a_rol": "empleado_tecnico"
     }
 ]

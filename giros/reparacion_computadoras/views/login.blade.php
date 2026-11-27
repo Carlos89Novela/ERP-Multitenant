@@ -50,17 +50,45 @@
             </div>
         @endif
 
+        @php
+            $valorCorreo = old('email', $correoRecordado ?? '');
+        @endphp
+
         <form method="POST" action="{{ route('taller.computadoras.login.submit') }}" class="space-y-4">
             @csrf
 
             <div>
                 <label class="block text-xs mb-1" style="color: var(--taller-muted);">Correo electrónico</label>
-                <input type="email" name="email" value="{{ old('email') }}" required autofocus placeholder="usuario@taller.com" class="w-full px-3.5 py-2.5 taller-input text-sm">
+                <input type="email" name="email" value="{{ $valorCorreo }}" required autofocus placeholder="usuario@taller.com" class="w-full px-3.5 py-2.5 taller-input text-sm">
             </div>
 
             <div>
                 <label class="block text-xs mb-1" style="color: var(--taller-muted);">Contraseña</label>
                 <input type="password" name="password" required placeholder="••••••••" class="w-full px-3.5 py-2.5 taller-input text-sm">
+            </div>
+
+            <div class="space-y-2 pt-1 text-xs" style="color: var(--taller-muted);">
+                <label class="flex items-center gap-2.5 cursor-pointer select-none">
+                    <input
+                        type="checkbox"
+                        name="recordar_usuario"
+                        value="1"
+                        {{ ($recordarUsuarioMarcado ?? false) ? 'checked' : '' }}
+                        class="h-4 w-4 rounded border-zinc-700 bg-zinc-900 accent-indigo-500"
+                    >
+                    <span>Recordar usuario (prellenar correo)</span>
+                </label>
+
+                <label class="flex items-center gap-2.5 cursor-pointer select-none">
+                    <input
+                        type="checkbox"
+                        name="mantener_sesion"
+                        value="1"
+                        {{ ($mantenerSesionMarcado ?? false) ? 'checked' : '' }}
+                        class="h-4 w-4 rounded border-zinc-700 bg-zinc-900 accent-indigo-500"
+                    >
+                    <span>Mantener sesión abierta por 30 días</span>
+                </label>
             </div>
 
             <button type="submit" class="w-full py-2.5 text-sm font-semibold taller-btn transition hover:opacity-95">
